@@ -27,33 +27,28 @@ window.SITE_DATA = window.SITE_DATA || {};
 
 window.SITE_DATA.characters = [
   {
-    id: "char-elena-voss",
-    name: "Елена «Багровая» Восс",
-    role: "Капитан",
-    status: "alive",
-    statusLabel: "Жива",
-    faction: "Вольная команда",
+    id: "char-logan",
+    name: "Логан Лоренц",
+    role: "Канонир",
+    faction: "Испанец",
     locationId: "loc-port-noire",
-    shipId: "ship-crimson-maw",
-    tags: ["капитан","стратег","бывший имперский офицер"],
+    shipId: "ship-saturday",
+    tags: ["канонир","Суббота"],
     image: "",
     references: [
-      { src: "", caption: "Референс костюма — капитанский плащ" },
-      { src: "", caption: "Референс — абордажная сабля с гравировкой" }
+      { src: "", caption: "Референс" }
     ],
     arts: [
-      { src: "", caption: "Портрет за штурвалом" }
+      { src: "", caption: "Арт" }
     ],
-    shortBio: "Бывший офицер имперского флота, десять лет назад перешедшая на сторону вольных капитанов после отказа выполнить приказ о потоплении гражданского судна.",
-    biography: "Елена Восс командует «Багровой Пастью» шесть лет и за это время ни разу не проиграла абордажный бой. Команда ценит её за холодную голову в шторм и за то, что она никогда не бросает раненых — качество редкое среди вольных капитанов.\n\nСреди своих Елена немногословна, но перед Советом Пирсов умеет говорить так, что даже старые капитаны замолкают. Её главная цель — не золото, а список имён: людей, отдавших приказ, из-за которого она покинула флот.",
-    historyNotes: "Родилась в семье потомственных мореходов на имперской земле. Поступила на флот в шестнадцать лет, дослужилась до капитана фрегата к тридцати. Дезертировала после Инцидента у мыса Гроз — подробности этого дня она не обсуждает даже с ближайшей командой."
+    shortBio: "инфо инфо инфо.",
+    biography: "мяу мяу мяу мяу.",
+    historyNotes: "гав гав гав гав."
   },
   {
     id: "char-boone",
     name: "Боунс «Штиль» Мур",
     role: "Квартирмейстер",
-    status: "alive",
-    statusLabel: "Жив",
     faction: "Вольная команда",
     locationId: "loc-port-noire",
     shipId: "ship-crimson-maw",
@@ -69,8 +64,6 @@ window.SITE_DATA.characters = [
     id: "char-pip",
     name: "Пип Ласточка",
     role: "Кок и юнга",
-    status: "alive",
-    statusLabel: "Жив",
     faction: "Вольная команда",
     locationId: null,
     shipId: "ship-crimson-maw",
@@ -86,8 +79,6 @@ window.SITE_DATA.characters = [
     id: "char-marguerite",
     name: "Маргерит из Бухты",
     role: "Информатор",
-    status: "unknown",
-    statusLabel: "Неизвестно",
     faction: "Независима",
     locationId: "loc-siren-cove",
     shipId: null,
@@ -103,8 +94,6 @@ window.SITE_DATA.characters = [
     id: "char-drake",
     name: "Капитан Абрахам Дрейк",
     role: "Легендарный капитан (погиб)",
-    status: "dead",
-    statusLabel: "Погиб",
     faction: "Историческая фигура",
     locationId: "loc-isla-calavera",
     shipId: "ship-storm-wren",
