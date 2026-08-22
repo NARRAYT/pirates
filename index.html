@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кодекс Чёрного Прилива — вики сеттинга</title>
+<meta name="description" content="Вики-сайт по пиратскому сеттингу: локации, корабли, персонажи, история мира и заметки.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- ============ СПИНКА / НАВИГАЦИЯ (корешок судового журнала) ============ -->
+  <nav class="spine" id="spine" aria-label="Основная навигация">
+    <div class="spine-brand" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="46" stroke="#6c624c" stroke-width="3"/>
+        <circle cx="50" cy="50" r="38" stroke="#464a43" stroke-width="1" opacity=".7"/>
+        <g class="compass-needle">
+          <path d="M50 12 L58 50 L50 46 L42 50 Z" fill="#5c4038"/>
+          <path d="M50 88 L58 50 L50 54 L42 50 Z" fill="#9c9078"/>
+        </g>
+        <circle cx="50" cy="50" r="4" fill="#6c624c"/>
+        <text x="50" y="10" fill="#9c9078" font-size="9" text-anchor="middle" font-family="Georgia">N</text>
+      </svg>
+    </div>
+    <ul class="spine-tabs" id="spine-tabs">
+      <!-- заполняется через engine.js -->
+    </ul>
+  </nav>
+
+  <div class="main-col">
+    <main class="content" id="app" role="main">
+      <!-- содержимое подставляется через engine.js -->
+    </main>
+    <footer class="site-foot">В поисках счастья.</footer>
+  </div>
+</div>
+
+<!--
+  ПОРЯДОК ПОДКЛЮЧЕНИЯ ВАЖЕН:
+  сначала файлы с данными (data/*.js) — их можно редактировать свободно,
+  затем engine.js — общий код сайта, его трогать не нужно.
+-->
+<script src="data/site-info.js"></script>
+<script src="data/locations.js"></script>
+<script src="data/ships.js"></script>
+<script src="data/characters.js"></script>
+<script src="data/history.js"></script>
+<script src="data/notes.js"></script>
+<script src="engine.js"></script>
+</body>
+</html>
