@@ -320,7 +320,7 @@ function renderShipDetail(id){
 }
 
 // ---- персонажи: фильтр + поиск ----
-let charFilterState = { q: "", role: "all", faction: "all", status: "all", tag: "all" };
+let charFilterState = { q: "", role: "all", faction: "all", tag: "all" };
 
 function uniqueValues(arr, key){
   return [...new Set(arr.map(x => x[key]).filter(Boolean))].sort();
@@ -349,12 +349,6 @@ function renderCharactersList(){
         <option value="all">Все фракции</option>
         ${factions.map(f => `<option value="${escapeHTML(f)}" ${charFilterState.faction===f?'selected':''}>${escapeHTML(f)}</option>`).join("")}
       </select>
-      <select id="filter-status" aria-label="Фильтр по статусу">
-        <option value="all">Любой статус</option>
-        <option value="alive" ${charFilterState.status==='alive'?'selected':''}>Жив</option>
-        <option value="dead" ${charFilterState.status==='dead'?'selected':''}>Погиб</option>
-        <option value="unknown" ${charFilterState.status==='unknown'?'selected':''}>Неизвестно</option>
-      </select>
       <select id="filter-tag" aria-label="Фильтр по метке">
         <option value="all">Все метки</option>
         ${tags.map(t => `<option value="${escapeHTML(t)}" ${charFilterState.tag===t?'selected':''}>${escapeHTML(t)}</option>`).join("")}
@@ -373,7 +367,6 @@ function filterCharacters(){
     if(q && !c.name.toLowerCase().includes(q)) return false;
     if(charFilterState.role !== "all" && c.role !== charFilterState.role) return false;
     if(charFilterState.faction !== "all" && c.faction !== charFilterState.faction) return false;
-    if(charFilterState.status !== "all" && c.status !== charFilterState.status) return false;
     if(charFilterState.tag !== "all" && !(c.tags||[]).includes(charFilterState.tag)) return false;
     return true;
   });
@@ -408,14 +401,11 @@ function attachCharacterFilterHandlers(){
   document.getElementById("filter-faction").addEventListener("change", e => {
     charFilterState.faction = e.target.value; updateCharGrid();
   });
-  document.getElementById("filter-status").addEventListener("change", e => {
-    charFilterState.status = e.target.value; updateCharGrid();
-  });
   document.getElementById("filter-tag").addEventListener("change", e => {
     charFilterState.tag = e.target.value; updateCharGrid();
   });
   document.getElementById("filter-reset").addEventListener("click", () => {
-    charFilterState = { q:"", role:"all", faction:"all", status:"all", tag:"all" };
+    charFilterState = { q:"", role:"all", faction:"all", tag:"all" };
     document.getElementById("app").innerHTML = renderCharactersList();
     attachCharacterFilterHandlers();
   });
