@@ -487,7 +487,7 @@ footer.site-foot{
   background: var(--parchment-light);
   color: var(--ink);
 }
-.map-search input[type="search"]::placeholder{ color: var(--ink-soft); opacity:.65; }
+.map-search .char-search input[type="search"]::placeholder{ color: var(--ink-soft); opacity:.65; }
 
 /* крестик очистки поля поиска — перекрашиваем в красный */
 .map-search input[type="search"]::-webkit-search-cancel-button{
