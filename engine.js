@@ -190,7 +190,7 @@ function renderMap(){
                 <span class="card-type">${escapeHTML(loc.type)}</span>
                 <h3>${escapeHTML(loc.name)}</h3>
                 <p class="card-desc">${escapeHTML(loc.short)}</p>
-                <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
+                <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье</a>
               </div>
             </div>
           </div>
