@@ -13,4 +13,4 @@ window.SITE_DATA.siteTagline = "Судовой журнал вольного а�
    замените ссылку ниже на путь к своему файлу (например "images/map.jpg")
    или на прямую ссылку на картинку. Если оставить "" — вместо карты
    покажется подсказка о том, что картинка не задана. */
-window.SITE_DATA.mapImage = "images/map.jg";
+window.SITE_DATA.mapImage = "images/map.jpg";
