@@ -572,7 +572,7 @@ footer.site-foot{
   gap:12px;
 }
 .map-pin-card img.thumb{
-  width:88px; height:88px; flex:0 0 auto;
+  width:130px; height:200px; flex:0 0 auto;
   object-fit:cover;
   border:1px solid var(--parchment-dark);
   margin:0;
