@@ -93,11 +93,13 @@ const ICONS = {
   wheel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2"/><path d="M12 4.5V8M12 16v3.5M4.5 12H8M16 12h3.5M6.6 6.6l2.5 2.5M14.9 14.9l2.5 2.5M6.6 17.4l2.5-2.5M14.9 9.1l2.5-2.5"/></svg>',
   blades: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16M20 4L4 20"/><circle cx="4" cy="4" r="1.3" fill="currentColor" stroke="none"/><circle cx="20" cy="4" r="1.3" fill="currentColor" stroke="none"/></svg>',
   hourglass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12"/><path d="M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/></svg>',
-  quill: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-7 1-12 6-13 13l-2 3 3-2C15 17 20 12 21 5"/><path d="M9 15l6-6"/></svg>'
+  quill: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-7 1-12 6-13 13l-2 3 3-2C15 17 20 12 21 5"/><path d="M9 15l6-6"/></svg>',
+  map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L4 6.2v13.6L9 17.6l6 2.2 5-2.2V4L15 6.2 9 4z"/><path d="M9 4v13.6M15 6.2v13.6"/></svg>'
 };
 
 const NAV_TABS = [
   { route: "home", label: "Начало", icon: "anchor" },
+  { route: "map", label: "Карта", icon: "map" },
   { route: "locations", label: "Локации", icon: "scroll" },
   { route: "ships", label: "Корабли", icon: "wheel" },
   { route: "characters", label: "Персонажи", icon: "blades" },
@@ -152,6 +154,11 @@ function renderHome(){
 
     <h2>Разделы кодекса</h2>
     <div class="section-tiles">
+      <a class="section-tile" href="#map">
+        <span class="tile-icon" aria-hidden="true">${ICONS.map}</span>
+        <h3>Карта</h3>
+        <p>Морская карта архипелага с метками всех известных локаций.</p>
+      </a>
       <a class="section-tile" href="#locations">
         <span class="tile-icon" aria-hidden="true">${ICONS.scroll}</span>
         <h3>Локации</h3>
@@ -179,6 +186,64 @@ function renderHome(){
       </a>
     </div>
   </section>`;
+}
+
+// ---- карта архипелага ----
+function renderMap(){
+  const pinned = DATA.locations.filter(l => typeof l.mapX === "number" && typeof l.mapY === "number");
+  const hasImage = !!(DATA.mapImage && DATA.mapImage.trim());
+  return `
+  <section class="view">
+    <span class="eyebrow">Навигационная карта</span>
+    <h1>Карта архипелага</h1>
+    <p class="section-intro">Наведите на метку (или нажмите на неё на телефоне), чтобы увидеть досье локации, либо перейдите на её страницу.</p>
+
+    <div class="map-wrap" id="map-wrap">
+      ${hasImage
+        ? `<img class="map-image" src="${escapeHTML(DATA.mapImage)}" alt="Карта архипелага" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='flex');">
+           <div class="map-placeholder" style="display:none;">Не удалось загрузить картинку карты. Проверьте ссылку в data/site-info.js (поле mapImage).</div>`
+        : `<div class="map-placeholder">Картинка карты не задана. Укажите ссылку в data/site-info.js (поле mapImage).</div>`
+      }
+      <div class="map-pins">
+        ${pinned.map(loc => `
+          <div class="map-pin" data-id="${loc.id}" style="left:${loc.mapX}%; top:${loc.mapY}%;">
+            <button class="map-pin-dot" type="button" aria-label="${escapeHTML(loc.name)} — открыть карточку"></button>
+            <span class="map-pin-label">${escapeHTML(loc.name)}</span>
+            <div class="map-pin-card">
+              ${imgTag(loc.image, loc.id, loc.name, "thumb")}
+              <span class="card-type">${escapeHTML(loc.type)}</span>
+              <h3>${escapeHTML(loc.name)}</h3>
+              <p class="card-desc">${escapeHTML(loc.short)}</p>
+              <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+
+    ${!pinned.length ? `<p class="empty">Ни у одной локации не заданы координаты на карте (поля mapX / mapY в data/locations.js).</p>` : ""}
+  </section>`;
+}
+
+let mapDocClickAttached = false;
+function attachMapHandlers(){
+  const wrap = document.getElementById("map-wrap");
+  if(!wrap) return;
+  wrap.addEventListener("click", e => {
+    const dot = e.target.closest(".map-pin-dot");
+    if(!dot) return;
+    e.stopPropagation();
+    const pin = dot.closest(".map-pin");
+    const wasOpen = pin.classList.contains("open");
+    wrap.querySelectorAll(".map-pin.open").forEach(p => p.classList.remove("open"));
+    if(!wasOpen) pin.classList.add("open");
+  });
+  if(!mapDocClickAttached){
+    document.addEventListener("click", () => {
+      document.querySelectorAll(".map-pin.open").forEach(p => p.classList.remove("open"));
+    });
+    mapDocClickAttached = true;
+  }
 }
 
 function renderLocationsList(){
@@ -492,6 +557,10 @@ function render(){
   switch(route){
     case "home":
       app.innerHTML = renderHome(); break;
+    case "map":
+      app.innerHTML = renderMap();
+      attachMapHandlers();
+      break;
     case "locations":
       app.innerHTML = renderLocationsList(); break;
     case "location":

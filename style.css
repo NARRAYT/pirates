@@ -509,3 +509,79 @@ footer.site-foot{
   .detail-head{ grid-template-columns: 1fr; }
   .detail-head img.portrait{ max-width: 220px; }
 }
+
+/* ---------- interactive map ---------- */
+.map-wrap{
+  position:relative;
+  width:100%;
+  margin-top:20px;
+  border:1px solid var(--parchment-dark);
+  box-shadow: 0 1px 0 rgba(255,255,255,.15) inset, 0 14px 30px var(--shadow);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='mp'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.16  0 0 0 0 0.11  0 0 0 0 0.06  0 0 0 0.45 0'/></filter><rect width='180' height='180' filter='url(%23mp)'/></svg>"),
+    var(--parchment-light);
+  overflow:hidden;
+}
+.map-image{
+  display:block;
+  width:100%;
+  height:auto;
+  filter: sepia(.12) contrast(1.03) brightness(.97);
+  pointer-events:none;
+  user-select:none;
+}
+.map-placeholder{
+  aspect-ratio: 16/10;
+  display:flex; align-items:center; justify-content:center;
+  font-family: var(--font-stamp); font-size:.85rem; color: var(--ink-soft);
+  text-align:center; padding:24px;
+}
+.map-pins{ position:absolute; inset:0; }
+.map-pin{ position:absolute; transform: translate(-50%,-100%); }
+.map-pin-dot{
+  width:18px; height:18px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: radial-gradient(circle at 35% 30%, #8a3327, var(--wax-red));
+  border: 1.5px solid rgba(0,0,0,.55);
+  box-shadow: 0 3px 7px rgba(0,0,0,.55);
+  padding:0;
+  display:block;
+  transition: filter .15s ease, transform .15s ease;
+}
+.map-pin-dot:hover, .map-pin.open .map-pin-dot{ filter:brightness(1.3); transform: rotate(-45deg) scale(1.15); }
+.map-pin-label{
+  position:absolute; top:1px; left:50%; transform:translateX(-50%);
+  font-family: var(--font-stamp); font-size:.62rem; color: var(--parchment-light);
+  text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.6);
+  white-space:nowrap;
+  pointer-events:none;
+}
+.map-pin-card{
+  display:none;
+  position:absolute;
+  bottom: 28px; left:50%;
+  transform: translateX(-50%);
+  width:220px;
+  background: var(--parchment-light);
+  border:1px solid var(--parchment-dark);
+  box-shadow: 0 12px 26px rgba(0,0,0,.6);
+  padding:12px 14px 14px;
+  z-index:20;
+  text-align:left;
+}
+.map-pin-card img.thumb{
+  width:100%; aspect-ratio:4/3; object-fit:cover;
+  border:1px solid var(--parchment-dark);
+  margin-bottom:8px;
+  filter: sepia(.25) contrast(1.05) brightness(.96);
+}
+.map-pin-card h3{ font-size:.98rem; }
+.map-pin-card .card-desc{ font-size:.85rem; }
+.map-pin-card .btn{ display:inline-block; margin-top:6px; }
+.map-pin:hover .map-pin-card,
+.map-pin.open .map-pin-card{ display:block; }
+
+@media (max-width: 780px){
+  .map-pin-card{ width:170px; padding:10px 12px 12px; }
+}
