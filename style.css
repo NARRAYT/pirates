@@ -554,7 +554,7 @@ footer.site-foot{
 .map-pin.dimmed .map-pin-label{ opacity:0; }
 .map-pin.highlight .map-pin-dot{ filter:brightness(1.35); transform: rotate(-45deg) scale(1.25); }
 
-/* --- popup card: horizontal layout, always opens above the pin --- */
+/* --- popup card: horizontal layout, always opens above the pi --- */
 .map-pin-card{
   display:none;
   position:absolute;
