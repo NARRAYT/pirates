@@ -12,4 +12,4 @@ window.SITE_DATA.siteTagline = "Судовой журнал вольного а�
    замените ссылку ниже на путь к своему файлу (например "images/map.jpg")
    или на прямую ссылку на картинку. Если оставить "" — вместо карты
    покажется подсказка о том, что картинка не задана. */
-window.SITE_DATA.mapImage = "https://preview.redd.it/a-pirates-map-of-the-americas-and-caribbean-in-1697-zoom-in-v0-gxs3evt5f4df1.jpeg?auto=webp&s=11fbee6610f3baeeb67912be1c359e798dd047ff";
+window.SITE_DATA.mapImage = "images/map.jpg";
