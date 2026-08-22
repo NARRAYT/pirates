@@ -152,43 +152,14 @@ function renderHome(){
       <div class="cell"><span class="n">${DATA.notes.length}</span><span class="l">Заметки</span></div>
     </div>
 
-    <h2>Разделы кодекса</h2>
-    <div class="section-tiles">
-      <a class="section-tile" href="#map">
-        <span class="tile-icon" aria-hidden="true">${ICONS.map}</span>
-        <h3>Карта</h3>
-        <p>Морская карта архипелага с метками всех известных локаций.</p>
-      </a>
-      <a class="section-tile" href="#locations">
-        <span class="tile-icon" aria-hidden="true">${ICONS.scroll}</span>
-        <h3>Локации</h3>
-        <p>Города, стоянки и проклятые берега архипелага — с кратким досье и списком тех, кто там обитает.</p>
-      </a>
-      <a class="section-tile" href="#ships">
-        <span class="tile-icon" aria-hidden="true">${ICONS.wheel}</span>
-        <h3>Корабли</h3>
-        <p>Всё, что держится на плаву — и то, что перестало.</p>
-      </a>
-      <a class="section-tile" href="#characters">
-        <span class="tile-icon" aria-hidden="true">${ICONS.blades}</span>
-        <h3>Персонажи</h3>
-        <p>Капитаны, боцманы и беглецы — все действующие лица архипелага.</p>
-      </a>
-      <a class="section-tile" href="#history">
-        <span class="tile-icon" aria-hidden="true">${ICONS.hourglass}</span>
-        <h3>История</h3>
-        <p>Ключевые вехи мира в хронологическом порядке.</p>
-      </a>
-      <a class="section-tile" href="#notes">
-        <span class="tile-icon" aria-hidden="true">${ICONS.quill}</span>
-        <h3>Заметки</h3>
-        <p>Мелкие идеи, нестыковки и зацепки на будущее.</p>
-      </a>
-    </div>
+    <h2>Общие сведения</h2>
+    <div class="prose">${paragraphize(DATA.aboutInfo)}</div>
   </section>`;
 }
 
 // ---- карта архипелага ----
+let mapSearchQuery = "";
+
 function renderMap(){
   const pinned = DATA.locations.filter(l => typeof l.mapX === "number" && typeof l.mapY === "number");
   const hasImage = !!(DATA.mapImage && DATA.mapImage.trim());
@@ -198,6 +169,10 @@ function renderMap(){
     <h1>Карта архипелага</h1>
     <p class="section-intro">Наведите на метку (или нажмите на неё на телефоне), чтобы увидеть досье локации, либо перейдите на её страницу.</p>
 
+    <div class="map-search">
+      <input type="search" id="map-search" placeholder="Поиск локации по названию…" value="${escapeHTML(mapSearchQuery)}" aria-label="Поиск локации на карте">
+    </div>
+
     <div class="map-wrap" id="map-wrap">
       ${hasImage
         ? `<img class="map-image" src="${escapeHTML(DATA.mapImage)}" alt="Карта архипелага" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='flex');">
@@ -206,15 +181,17 @@ function renderMap(){
       }
       <div class="map-pins">
         ${pinned.map(loc => `
-          <div class="map-pin" data-id="${loc.id}" style="left:${loc.mapX}%; top:${loc.mapY}%;">
+          <div class="map-pin" data-id="${loc.id}" data-name="${escapeHTML(loc.name.toLowerCase())}" style="left:${loc.mapX}%; top:${loc.mapY}%;">
             <button class="map-pin-dot" type="button" aria-label="${escapeHTML(loc.name)} — открыть карточку"></button>
             <span class="map-pin-label">${escapeHTML(loc.name)}</span>
             <div class="map-pin-card">
               ${imgTag(loc.image, loc.id, loc.name, "thumb")}
-              <span class="card-type">${escapeHTML(loc.type)}</span>
-              <h3>${escapeHTML(loc.name)}</h3>
-              <p class="card-desc">${escapeHTML(loc.short)}</p>
-              <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
+              <div class="map-pin-card-body">
+                <span class="card-type">${escapeHTML(loc.type)}</span>
+                <h3>${escapeHTML(loc.name)}</h3>
+                <p class="card-desc">${escapeHTML(loc.short)}</p>
+                <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
+              </div>
             </div>
           </div>
         `).join("")}
@@ -226,6 +203,17 @@ function renderMap(){
 }
 
 let mapDocClickAttached = false;
+
+function filterMapPins(query){
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll(".map-pin").forEach(pin => {
+    const name = pin.dataset.name || "";
+    const match = !q || name.includes(q);
+    pin.classList.toggle("dimmed", !match);
+    pin.classList.toggle("highlight", !!q && match);
+  });
+}
+
 function attachMapHandlers(){
   const wrap = document.getElementById("map-wrap");
   if(!wrap) return;
@@ -244,6 +232,14 @@ function attachMapHandlers(){
     });
     mapDocClickAttached = true;
   }
+  const search = document.getElementById("map-search");
+  if(search){
+    search.addEventListener("input", e => {
+      mapSearchQuery = e.target.value;
+      filterMapPins(mapSearchQuery);
+    });
+  }
+  filterMapPins(mapSearchQuery);
 }
 
 function renderLocationsList(){
