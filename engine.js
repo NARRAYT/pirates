@@ -65,11 +65,6 @@ function charactersFor(ids){
   return (ids||[]).map(findCharacter).filter(Boolean);
 }
 
-function sealHTML(status, label){
-  const st = status === "alive" ? "alive" : status === "dead" ? "dead" : "unknown";
-  return `<span class="seal" data-status="${st}"><span class="dot" aria-hidden="true"></span>${escapeHTML(label)}</span>`;
-}
-
 function rosterHTML(chars){
   if(!chars.length) return `<p class="empty">Пока никто не привязан к этой записи.</p>`;
   return `<div class="roster">${chars.map(c => `
@@ -390,7 +385,6 @@ function renderCharacterCard(c){
       ${imgTag(c.image, c.id, c.name, "thumb")}
       <span class="card-type">${escapeHTML(c.role)}</span>
       <h3>${escapeHTML(c.name)}</h3>
-      ${sealHTML(c.status, c.statusLabel)}
       <p class="card-desc">${escapeHTML(c.shortBio)}</p>
       <div class="card-tags">${(c.tags||[]).slice(0,3).map(t=>`<span class="chip">${escapeHTML(t)}</span>`).join("")}</div>
     </a>`;
@@ -445,7 +439,6 @@ function renderCharacterDetail(id){
       <div class="detail-facts">
         <span class="card-type">${escapeHTML(c.role)}</span>
         <h1>${escapeHTML(c.name)}</h1>
-        ${sealHTML(c.status, c.statusLabel)}
         <table class="facts-table">
           <tr><td class="k">Фракция</td><td>${escapeHTML(c.faction)}</td></tr>
           <tr><td class="k">Локация</td><td>${loc ? `<a href="#location/${loc.id}">${escapeHTML(loc.name)}</a>` : "&mdash;"}</td></tr>
