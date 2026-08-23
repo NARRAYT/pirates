@@ -543,11 +543,16 @@ footer.site-foot{
 }
 .map-pin-dot:hover, .map-pin.open .map-pin-dot{ filter:brightness(1.3); transform: rotate(-45deg) scale(1.15); }
 .map-pin-label{
-  position:absolute; top:-9px; left:50%; transform:translateX(-50%);
-  font-family: var(--font-stamp); font-size:.62rem; color: var(--ink);
-  text-shadow: 0 1px 0 rgba(255,255,255,.75), 0 0 5px rgba(255,255,255,.85), 0 0 5px rgba(255,255,255,.85);
-  white-space:nowrap;
-  pointer-events:none;
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-stamp);
+    font-weight: bold;
+    font-size: .62rem;
+    color: var(--ink);
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 /* --- search state --- */
