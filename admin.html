@@ -86,13 +86,39 @@
   }
   #admin-content:empty{ display:none; }
 
-  .admin-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin:20px 0 16px; }
-  .admin-tab-btn{
-    font-family: var(--font-head); font-size:.78rem; letter-spacing:.04em; text-transform:uppercase;
-    padding:9px 14px; border:1px solid var(--parchment-dark); background:transparent; color:var(--parchment-light);
-    cursor:pointer;
+  .admin-tabs{ margin:20px 0 16px; }
+  .admin-tab-select{
+    font-family: var(--font-head); font-size:.85rem; letter-spacing:.03em; text-transform:uppercase;
+    padding:11px 14px; border:1px solid var(--parchment-dark); background: var(--leather-dark);
+    color:var(--parchment-light); width:100%; max-width:380px; cursor:pointer;
   }
-  .admin-tab-btn.active{ background: var(--gold); color: var(--leather-dark); border-color:var(--ink); }
+
+  .admin-repo-detected{ font-size:.88rem; margin:-4px 0 14px; }
+  .btn-link{
+    background:none; border:none; padding:0; font:inherit; color:var(--gold-bright, var(--gold));
+    text-decoration:underline; cursor:pointer;
+  }
+  #owner-field-wrap[hidden], #repo-field-wrap[hidden]{ display:none; }
+
+  .admin-mappoint-box{
+    position:relative; width:100%; max-width:520px; border:1px solid var(--ink-soft);
+    background: var(--parchment); overflow:hidden; cursor:crosshair; line-height:0;
+  }
+  .admin-mappoint-img{ width:100%; height:auto; display:block; user-select:none; -webkit-user-drag:none; }
+  .admin-mappoint-noimg{
+    padding:28px 16px; text-align:center; color: var(--ink-soft); font-size:.85rem; line-height:1.5;
+  }
+  .admin-mappoint-pin{
+    position:absolute; width:18px; height:18px; margin-left:-9px; margin-top:-9px;
+    border-radius:50%; background: var(--gold, #c9a227); border:2px solid #3a2a1a;
+    box-shadow:0 1px 4px rgba(0,0,0,.6); cursor:grab; touch-action:none;
+  }
+  .admin-mappoint-pin:active{ cursor:grabbing; }
+  .admin-mappoint-controls{ display:flex; gap:10px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  .admin-mappoint-coord{ display:flex; align-items:center; gap:6px; font-size:.85rem; color: var(--ink-soft); }
+  .admin-mappoint-coord input{
+    width:80px; padding:5px 7px; border:1px solid var(--ink-soft); font-family:var(--font-body);
+  }
 
   .admin-status{ font-size:.88rem; margin-top:10px; padding:8px 10px; border-left:3px solid var(--gold); display:none; }
   .admin-status.show{ display:block; }
@@ -125,16 +151,20 @@
 
   <section class="admin-card" id="setup-panel">
     <h2>Подключение к репозиторию</h2>
+    <p class="admin-repo-detected" id="repo-detected-line" hidden>
+      Репозиторий: <strong id="repo-detected-text"></strong>
+      · <button type="button" class="btn-link" id="repo-manual-toggle">указать вручную</button>
+    </p>
     <form id="connect-form">
       <div class="admin-grid2">
-        <label class="admin-field">
+        <div class="admin-field" id="owner-field-wrap">
           <span>Владелец репозитория (username или организация)</span>
           <input type="text" id="cfg-owner" placeholder="например, mynickname">
-        </label>
-        <label class="admin-field">
+        </div>
+        <div class="admin-field" id="repo-field-wrap">
           <span>Название репозитория</span>
           <input type="text" id="cfg-repo" placeholder="например, black-tide-codex">
-        </label>
+        </div>
         <label class="admin-field">
           <span>Ветка</span>
           <input type="text" id="cfg-branch" placeholder="main" value="main">
@@ -190,6 +220,56 @@ function slugify(str, prefix){
   const s = t.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return prefix ? `${prefix}-${s}` : s;
 }
+
+// ---------- автоопределение владельца/репозитория по адресу GitHub Pages ----------
+// Работает, когда страница открыта как https://ВЛАДЕЛЕЦ.github.io/... —
+// для пользовательских/органайзе้шн-страниц (репозиторий "владелец.github.io",
+// сайт в корне) и для проектных страниц (репозиторий = первая папка в пути).
+// Если сайт на своём домене или открыт локально — определить не получится,
+// тогда поля показываются для ручного ввода.
+function detectRepoFromLocation(){
+  const m = location.hostname.match(/^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\.github\.io$/i);
+  if(!m) return null;
+  const owner = m[1];
+  const parts = location.pathname.split("/").filter(Boolean);
+  const first = parts[0];
+  const looksLikeRootFile = !first || (parts.length === 1 && first.includes("."));
+  const repo = looksLikeRootFile ? `${owner}.github.io` : first;
+  return { owner, repo };
+}
+
+function applyAutoDetect(){
+  const detected = detectRepoFromLocation();
+  const cfg = getConfig();
+  const ownerWrap = document.getElementById("owner-field-wrap");
+  const repoWrap = document.getElementById("repo-field-wrap");
+  const detectedLine = document.getElementById("repo-detected-line");
+  const detectedText = document.getElementById("repo-detected-text");
+  const ownerInput = document.getElementById("cfg-owner");
+  const repoInput = document.getElementById("cfg-repo");
+
+  if(detected && !cfg.manualRepo){
+    ownerInput.value = cfg.owner || detected.owner;
+    repoInput.value = cfg.repo || detected.repo;
+    ownerWrap.hidden = true;
+    repoWrap.hidden = true;
+    detectedText.textContent = `${ownerInput.value}/${repoInput.value}`;
+    detectedLine.hidden = false;
+  } else {
+    ownerWrap.hidden = false;
+    repoWrap.hidden = false;
+    detectedLine.hidden = true;
+  }
+}
+
+document.getElementById("repo-manual-toggle").addEventListener("click", () => {
+  const cfg = getConfig();
+  cfg.manualRepo = true;
+  setConfig(cfg);
+  document.getElementById("owner-field-wrap").hidden = false;
+  document.getElementById("repo-field-wrap").hidden = false;
+  document.getElementById("repo-detected-line").hidden = true;
+});
 
 // ---------- конфиг / localStorage ----------
 function getConfig(){
@@ -263,8 +343,8 @@ const SCHEMAS = {
       { key:"short", label:"Короткое описание", type:"textarea" },
       { key:"history", label:"Полная история", type:"paragraphs", hint:"пустая строка — новый абзац" },
       { key:"characterIds", label:"ID персонажей", type:"tags", hint:"через запятую, см. вкладку «Персонажи»" },
-      { key:"mapX", label:"X на карте (0–100)", type:"number" },
-      { key:"mapY", label:"Y на карте (0–100)", type:"number" }
+      { key:"mapX", pairKey:"mapY", label:"Метка на карте", type:"mappoint",
+        hint:"Кликните по карте или перетащите метку, чтобы задать положение. Числа тоже можно вписать вручную (проценты 0–100)." }
     ]
   },
   characters: {
@@ -368,7 +448,7 @@ const SCHEMAS = {
     ]
   },
   siteInfo: {
-    file: "data/site-info.js", title: "Общая информация", kind: "object",
+    file: "data/site-info.js", title: "Сайт-инфо", kind: "object",
     header: `/* =========================================================================
    ОБЩАЯ ИНФОРМАЦИЯ О САЙТЕ${HEADER_NOTE}
    ========================================================================= */
@@ -381,7 +461,7 @@ const SCHEMAS = {
     ]
   }
 };
-const TAB_ORDER = ["locations","characters","ships","historyTimeline","notes","siteInfo"];
+const TAB_ORDER = ["characters","ships","locations","historyTimeline","notes","siteInfo"];
 
 let cache = {};       // { [schemaKey]: { data, sha } }
 let currentTab = null;
@@ -450,7 +530,7 @@ function showToast(msg, isError){
 }
 
 // ---------- поля форм ----------
-function renderField(field, value){
+function renderField(field, value, item){
   const id = `f_${field.key}`;
   switch(field.type){
     case "text":
@@ -481,9 +561,73 @@ function renderField(field, value){
       </label>`;
     case "pairs":
       return renderPairsField(field, value || []);
+    case "mappoint":
+      return renderMapPointField(field, value, item ? item[field.pairKey] : null);
     default:
       return "";
   }
+}
+function renderMapPointField(field, xVal, yVal){
+  const mapImage = (cache.siteInfo && cache.siteInfo.data && cache.siteInfo.data.mapImage) || "";
+  const hasPoint = xVal !== null && xVal !== undefined && xVal !== "" && yVal !== null && yVal !== undefined && yVal !== "";
+  const left = hasPoint ? xVal : 50;
+  const top = hasPoint ? yVal : 50;
+  return `<div class="admin-field admin-mappoint" data-map-key="${field.key}" data-map-pair="${field.pairKey}">
+    <span>${field.label}</span>
+    ${field.hint ? `<small>${field.hint}</small>` : ""}
+    <div class="admin-mappoint-box">
+      ${mapImage
+        ? `<img src="${escapeAttr(mapImage)}" alt="" class="admin-mappoint-img" draggable="false">
+           <div class="admin-mappoint-pin" style="left:${left}%; top:${top}%; ${hasPoint ? "" : "display:none;"}"></div>`
+        : `<div class="admin-mappoint-noimg">Картинка карты не задана — впишите ссылку на вкладке «Сайт-инфо», тогда здесь появится карта для клика.</div>`}
+    </div>
+    <div class="admin-mappoint-controls">
+      <label class="admin-mappoint-coord">X <input type="number" step="any" min="0" max="100" name="${field.key}" value="${xVal ?? ""}"></label>
+      <label class="admin-mappoint-coord">Y <input type="number" step="any" min="0" max="100" name="${field.pairKey}" value="${yVal ?? ""}"></label>
+      <button type="button" class="btn btn-ghost btn-sm" data-mappoint-clear>Убрать метку</button>
+    </div>
+  </div>`;
+}
+function wireMapPointField(wrapper){
+  const xInput = wrapper.querySelector(`[name="${wrapper.dataset.mapKey}"]`);
+  const yInput = wrapper.querySelector(`[name="${wrapper.dataset.mapPair}"]`);
+  const clearBtn = wrapper.querySelector("[data-mappoint-clear]");
+  const img = wrapper.querySelector(".admin-mappoint-img");
+  const pin = wrapper.querySelector(".admin-mappoint-pin");
+  const box = wrapper.querySelector(".admin-mappoint-box");
+
+  if(clearBtn){
+    clearBtn.addEventListener("click", () => {
+      xInput.value = ""; yInput.value = "";
+      if(pin) pin.style.display = "none";
+    });
+  }
+  if(!img || !pin || !box) return; // карта не задана — только числовые поля
+
+  function placeFromEvent(clientX, clientY){
+    const rect = img.getBoundingClientRect();
+    let x = ((clientX - rect.left) / rect.width) * 100;
+    let y = ((clientY - rect.top) / rect.height) * 100;
+    x = Math.max(0, Math.min(100, Math.round(x * 10) / 10));
+    y = Math.max(0, Math.min(100, Math.round(y * 10) / 10));
+    xInput.value = x; yInput.value = y;
+    pin.style.left = x + "%"; pin.style.top = y + "%"; pin.style.display = "block";
+  }
+  box.addEventListener("click", e => { if(e.target !== pin) placeFromEvent(e.clientX, e.clientY); });
+
+  let dragging = false;
+  pin.addEventListener("pointerdown", e => { dragging = true; pin.setPointerCapture(e.pointerId); e.stopPropagation(); });
+  pin.addEventListener("pointermove", e => { if(dragging) placeFromEvent(e.clientX, e.clientY); });
+  pin.addEventListener("pointerup", () => { dragging = false; });
+  pin.addEventListener("pointercancel", () => { dragging = false; });
+
+  function syncFromInputs(){
+    const xv = parseFloat(xInput.value), yv = parseFloat(yInput.value);
+    if(!isNaN(xv) && !isNaN(yv)){ pin.style.left = xv + "%"; pin.style.top = yv + "%"; pin.style.display = "block"; }
+    else pin.style.display = "none";
+  }
+  xInput.addEventListener("input", syncFromInputs);
+  yInput.addEventListener("input", syncFromInputs);
 }
 function pairRowHtml(item){
   item = item || { src:"", caption:"" };
@@ -512,6 +656,13 @@ function collectFormData(schema, formEl){
       })).filter(p => p.src || p.caption);
       return;
     }
+    if(field.type === "mappoint"){
+      const xEl = formEl.querySelector(`[name="${field.key}"]`);
+      const yEl = formEl.querySelector(`[name="${field.pairKey}"]`);
+      out[field.key] = xEl && xEl.value !== "" ? Number(xEl.value) : null;
+      out[field.pairKey] = yEl && yEl.value !== "" ? Number(yEl.value) : null;
+      return;
+    }
     const el = formEl.querySelector(`[name="${field.key}"]`);
     if(!el) return;
     if(field.type === "tags") out[field.key] = el.value.split(",").map(s => s.trim()).filter(Boolean);
@@ -527,17 +678,16 @@ const tabsEl = document.getElementById("admin-tabs");
 const contentEl = document.getElementById("admin-content");
 
 function renderTabs(){
-  tabsEl.innerHTML = TAB_ORDER.map(key =>
-    `<button type="button" class="admin-tab-btn" data-tab="${key}">${SCHEMAS[key].title}</button>`
-  ).join("");
-  tabsEl.querySelectorAll(".admin-tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => selectTab(btn.dataset.tab));
-  });
+  tabsEl.innerHTML = `<select id="admin-tab-select" class="admin-tab-select" aria-label="Раздел для редактирования">
+    ${TAB_ORDER.map(key => `<option value="${key}">${SCHEMAS[key].title}</option>`).join("")}
+  </select>`;
+  document.getElementById("admin-tab-select").addEventListener("change", e => selectTab(e.target.value));
 }
 
 function selectTab(key){
   currentTab = key;
-  tabsEl.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === key));
+  const sel = document.getElementById("admin-tab-select");
+  if(sel) sel.value = key;
   const schema = SCHEMAS[key];
   if(schema.kind === "object") renderObjectForm(key);
   else renderList(key);
@@ -605,7 +755,7 @@ function renderForm(key, index){
   const data = cache[key].data;
   const isNew = index === null;
   const item = isNew ? {} : data[index];
-  const fieldsHtml = schema.fields.map(f => renderField(f, item[f.key])).join("");
+  const fieldsHtml = schema.fields.map(f => renderField(f, item[f.key], item)).join("");
 
   contentEl.innerHTML = `
     <form id="item-form" class="admin-form">
@@ -618,6 +768,8 @@ function renderForm(key, index){
     </form>`;
 
   const form = document.getElementById("item-form");
+
+  form.querySelectorAll(".admin-mappoint[data-map-key]").forEach(wireMapPointField);
 
   form.querySelectorAll("[data-add-pair]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -663,7 +815,7 @@ function renderForm(key, index){
 function renderObjectForm(key){
   const schema = SCHEMAS[key];
   const data = cache[key].data;
-  const fieldsHtml = schema.fields.map(f => renderField(f, data[f.key])).join("");
+  const fieldsHtml = schema.fields.map(f => renderField(f, data[f.key], data)).join("");
   contentEl.innerHTML = `
     <form id="item-form" class="admin-form">
       <h3>${schema.title}</h3>
@@ -673,6 +825,7 @@ function renderObjectForm(key){
         <button type="button" class="btn btn-ghost" id="reload-btn">Обновить из GitHub</button>
       </div>
     </form>`;
+  document.getElementById("item-form").querySelectorAll(".admin-mappoint[data-map-key]").forEach(wireMapPointField);
   document.getElementById("reload-btn").addEventListener("click", async () => {
     try{ await loadFile(key); renderObjectForm(key); showToast("Обновлено."); }
     catch(e){ showToast(e.message, true); }
@@ -693,7 +846,8 @@ document.getElementById("connect-form").addEventListener("submit", async e => {
   const branch = document.getElementById("cfg-branch").value.trim() || "main";
   const token = document.getElementById("cfg-token").value.trim();
   if(!owner || !repo || !token){ showStatus("Заполните владельца, репозиторий и токен.", "error"); return; }
-  setConfig({ owner, repo, branch, token });
+  const prevCfg = getConfig();
+  setConfig({ owner, repo, branch, token, manualRepo: !!prevCfg.manualRepo });
   showStatus("Проверяем доступ…", "info");
   try{
     const res = await fetch(`${API_BASE}/repos/${owner}/${repo}`, { headers: authHeaders() });
@@ -723,17 +877,23 @@ document.getElementById("disconnect-btn").addEventListener("click", () => {
   tabsEl.innerHTML = "";
   contentEl.innerHTML = "";
   document.getElementById("cfg-token").value = "";
+  applyAutoDetect();
   showStatus("Токен забыт. Данные для входа удалены из этого браузера.", "info");
 });
 
 // ---------- автозаполнение при открытии, если конфиг уже сохранён ----------
 (function init(){
   const cfg = getConfig();
-  if(cfg.owner) document.getElementById("cfg-owner").value = cfg.owner;
-  if(cfg.repo) document.getElementById("cfg-repo").value = cfg.repo;
+  applyAutoDetect();
+  if(cfg.manualRepo){
+    if(cfg.owner) document.getElementById("cfg-owner").value = cfg.owner;
+    if(cfg.repo) document.getElementById("cfg-repo").value = cfg.repo;
+  }
   if(cfg.branch) document.getElementById("cfg-branch").value = cfg.branch;
   if(cfg.token) document.getElementById("cfg-token").value = cfg.token;
-  if(cfg.owner && cfg.repo && cfg.token){
+  const owner = document.getElementById("cfg-owner").value;
+  const repo = document.getElementById("cfg-repo").value;
+  if(owner && repo && cfg.token){
     document.getElementById("connect-form").requestSubmit();
   }
 })();
