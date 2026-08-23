@@ -76,6 +76,22 @@
   .admin-pair-row{ display:flex; gap:6px; }
   .admin-pair-row input{ flex:1; padding:6px 8px; border:1px solid var(--ink-soft); font-family:var(--font-body); }
 
+  .admin-checklist-filter{
+    font-family: var(--font-body); font-size:.9rem; padding:6px 8px;
+    border:1px solid var(--ink-soft); margin-bottom:6px; width:100%;
+  }
+  .admin-checklist-box{
+    max-height:260px; overflow-y:auto; border:1px solid var(--ink-soft);
+    background:#fff; padding:6px 8px; display:flex; flex-direction:column; gap:1px;
+  }
+  .admin-checklist-item{
+    display:flex; align-items:baseline; gap:8px; padding:5px 6px;
+    font-family:var(--font-body); font-size:.92rem; color:var(--ink); cursor:pointer;
+  }
+  .admin-checklist-item:hover{ background: var(--parchment); }
+  .admin-checklist-item input{ margin:0; flex-shrink:0; }
+  .admin-checklist-id{ color:var(--ink-soft); font-size:.8em; }
+
   #admin-content{
     background: var(--parchment-light);
     border:1px solid var(--parchment-dark);
@@ -314,7 +330,8 @@ const SCHEMAS = {
    image         — путь/ссылка на картинку, или "" для авто-заглушки
    short         — короткое описание (видно в карточке-превью)
    history       — полный текст истории места. Абзацы разделяйте ПУСТОЙ СТРОКОЙ
-   characterIds  — список id персонажей (data/characters.js)
+   characterIds  — список id персонажей (data/characters.js), отмечаются
+                   галочками в админке
    mapX, mapY    — положение метки на карте, в ПРОЦЕНТАХ (0-100)${HEADER_NOTE}
    ========================================================================= */
 `,
@@ -325,7 +342,7 @@ const SCHEMAS = {
       { key:"image", label:"Картинка (ссылка)", type:"text", placeholder:"пусто — авто-заглушка" },
       { key:"short", label:"Короткое описание", type:"textarea" },
       { key:"history", label:"Полная история", type:"paragraphs", hint:"пустая строка — новый абзац" },
-      { key:"characterIds", label:"ID персонажей", type:"tags", hint:"через запятую, см. вкладку «Персонажи»" },
+      { key:"characterIds", label:"Персонажи", type:"checklist-dynamic", source:"characters", hint:"отметьте персонажей, привязанных к этой локации" },
       { key:"mapX", pairKey:"mapY", label:"Метка на карте", type:"mappoint",
         hint:"Кликните по карте или перетащите метку, чтобы задать положение. Числа тоже можно вписать вручную (проценты 0–100)." }
     ]
@@ -383,7 +400,8 @@ const SCHEMAS = {
    image         — путь/ссылка на картинку, или "" для авто-заглушки
    short         — короткое описание (видно в карточке-превью)
    history       — полный текст истории корабля. Абзацы — ПУСТОЙ СТРОКОЙ
-   characterIds  — список id персонажей из экипажа${HEADER_NOTE}
+   characterIds  — список id персонажей из экипажа, отмечаются галочками
+                   в админке${HEADER_NOTE}
    ========================================================================= */
 `,
     fields: [
@@ -393,7 +411,7 @@ const SCHEMAS = {
       { key:"image", label:"Картинка (ссылка)", type:"text", placeholder:"пусто — авто-заглушка" },
       { key:"short", label:"Короткое описание", type:"textarea" },
       { key:"history", label:"Полная история", type:"paragraphs", hint:"пустая строка — новый абзац" },
-      { key:"characterIds", label:"Экипаж (ID персонажей)", type:"tags", hint:"через запятую" }
+      { key:"characterIds", label:"Экипаж", type:"checklist-dynamic", source:"characters", hint:"отметьте персонажей из экипажа" }
     ]
   },
   historyTimeline: {
@@ -544,6 +562,8 @@ function renderField(field, value, item){
       </label>`;
     case "pairs":
       return renderPairsField(field, value || []);
+    case "checklist-dynamic":
+      return renderChecklistField(field, value || []);
     case "mappoint":
       return renderMapPointField(field, value, item ? item[field.pairKey] : null);
     default:
@@ -628,6 +648,45 @@ function renderPairsField(field, items){
   </div>`;
 }
 
+// Список с галочками, источник — данные другой вкладки (например, персонажи
+// для локации/корабля). Хранит те же ID строкой массива, что и раньше,
+// просто позволяет выбирать их кликом вместо ручного набора через запятую.
+function renderChecklistField(field, values){
+  const list = (cache[field.source] && cache[field.source].data) || [];
+  const checked = new Set(values);
+  let itemsHtml;
+  if(list.length){
+    itemsHtml = list.map(it => {
+      const label = it.name || it.title || it.id;
+      const searchKey = `${label} ${it.id}`.toLowerCase();
+      return `<label class="admin-checklist-item" data-search="${escapeAttr(searchKey)}">
+        <input type="checkbox" value="${escapeAttr(it.id)}" ${checked.has(it.id) ? "checked" : ""}>
+        <span>${escapeHtml(label)}</span>
+        <span class="admin-checklist-id">${escapeHtml(it.id)}</span>
+      </label>`;
+    }).join("");
+  } else {
+    const sourceTitle = (SCHEMAS[field.source] && SCHEMAS[field.source].title) || field.source;
+    itemsHtml = `<p class="admin-empty">Список пуст — сначала добавьте записи на вкладке «${escapeHtml(sourceTitle)}».</p>`;
+  }
+  return `<div class="admin-field admin-checklist" data-checklist-for="${field.key}">
+    <span>${field.label}</span>
+    ${field.hint ? `<small>${field.hint}</small>` : ""}
+    ${list.length > 6 ? `<input type="text" class="admin-checklist-filter" placeholder="Фильтр по имени или ID…">` : ""}
+    <div class="admin-checklist-box">${itemsHtml}</div>
+  </div>`;
+}
+function wireChecklistField(wrapper){
+  const filterInput = wrapper.querySelector(".admin-checklist-filter");
+  if(!filterInput) return;
+  filterInput.addEventListener("input", () => {
+    const q = filterInput.value.trim().toLowerCase();
+    wrapper.querySelectorAll(".admin-checklist-item").forEach(item => {
+      item.style.display = (!q || item.dataset.search.includes(q)) ? "" : "none";
+    });
+  });
+}
+
 function collectFormData(schema, formEl){
   const out = {};
   schema.fields.forEach(field => {
@@ -644,6 +703,11 @@ function collectFormData(schema, formEl){
       const yEl = formEl.querySelector(`[name="${field.pairKey}"]`);
       out[field.key] = xEl && xEl.value !== "" ? Number(xEl.value) : null;
       out[field.pairKey] = yEl && yEl.value !== "" ? Number(yEl.value) : null;
+      return;
+    }
+    if(field.type === "checklist-dynamic"){
+      const boxes = formEl.querySelectorAll(`.admin-checklist[data-checklist-for="${field.key}"] input[type="checkbox"]`);
+      out[field.key] = Array.from(boxes).filter(b => b.checked).map(b => b.value);
       return;
     }
     const el = formEl.querySelector(`[name="${field.key}"]`);
@@ -753,6 +817,7 @@ function renderForm(key, index){
   const form = document.getElementById("item-form");
 
   form.querySelectorAll(".admin-mappoint[data-map-key]").forEach(wireMapPointField);
+  form.querySelectorAll(".admin-checklist[data-checklist-for]").forEach(wireChecklistField);
 
   form.querySelectorAll("[data-add-pair]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -809,6 +874,7 @@ function renderObjectForm(key){
       </div>
     </form>`;
   document.getElementById("item-form").querySelectorAll(".admin-mappoint[data-map-key]").forEach(wireMapPointField);
+  document.getElementById("item-form").querySelectorAll(".admin-checklist[data-checklist-for]").forEach(wireChecklistField);
   document.getElementById("reload-btn").addEventListener("click", async () => {
     try{ await loadFile(key); renderObjectForm(key); showToast("Обновлено."); }
     catch(e){ showToast(e.message, true); }
