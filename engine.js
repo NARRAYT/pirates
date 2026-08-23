@@ -760,272 +760,183 @@ function attachNotesHandlers(){
   updateNotesList();
 }
 
-// ---- книга: главы автоматически разбиваются на страницы-листы ----
+// ---- книга: глава = одна страница, высота свободная ----
 //
 // В данных (data/book.js) хранятся ГЛАВЫ целиком, текст любой длины.
-// Здесь этот текст на лету раскладывается по страницам так, чтобы он
-// всегда помещался в лист книги, а если не помещается — переносится
-// на следующий лист, как в обычной бумажной книге.
+// Раньше движок резал главу на "листы" под размер окна — теперь этого
+// нет: вся глава показывается как один непрерывный лист, который сам
+// вытягивается по высоте под весь текст. Пролистывание — по главам,
+// стрелки стоят СВЕРХУ и СНИЗУ от листа (как на сайтах с мангой), а не
+// по бокам, поэтому на телефоне ничего никуда не "срывается" при переносе.
 
-let bookComputed = [];     // посчитанные страницы: [{ chapterIdx, isFirst, html }, ...]
-let bookIndex = 0;
+let bookChapterIdx = 0;
 let bookTocOpen = false;
 function bookChapters(){ return DATA.bookChapters || []; }
 
-// Разбивает текст главы на "блоки" — абзацы и картинки, с текстом абзаца
-// ещё и разбитым на токены (слова/теги/пробелы), чтобы длинный абзац можно
-// было при необходимости разрезать между листами.
-function tokenizeHTML(html){
-  const re = /(<[^>]+>)|(\s+)|([^\s<]+)/g;
-  const tokens = [];
-  let m;
-  while((m = re.exec(html))) tokens.push(m[0]);
-  return tokens;
-}
-
-function textToBlocks(text){
-  if(!text) return [];
+// Абзацы главы + картинки в них — без разбиения на токены/страницы,
+// оно больше не нужно: главу просто выводим целиком.
+function paragraphizeBook(text){
+  if(!text) return "";
+  let first = true;
   return text.split(/\n\s*\n/).map(raw => {
-    const trimmedRaw = raw.trim();
-    if(!trimmedRaw) return null;
-    const { withPlaceholders, found } = extractImages(trimmedRaw);
+    const trimmed = raw.trim();
+    if(!trimmed) return "";
+    const { withPlaceholders, found } = extractImages(trimmed);
     const soleImage = found.length === 1 && withPlaceholders.trim() === "\u0000IMG0\u0000";
-    if(soleImage) return { type:"image", html: found[0] };
+    const isFirst = first;
+    first = false;
+    if(soleImage) return found[0];
     const escaped = escapeHTML(withPlaceholders).replace(/\n/g, "<br>");
     const html = restoreImages(escaped, found);
-    return { type:"text", html, words: tokenizeHTML(html) };
-  }).filter(Boolean);
+    return `<p${isFirst ? ' class="first"' : ""}>${html}</p>`;
+  }).join("");
 }
 
-// Заголовок главы — крупный, на первом листе главы; на остальных листах
-// той же главы — небольшая "колонтитул"-подпись с названием, как в книгах.
-function buildPageHTML(ch, isFirst, innerHTML){
-  const head = isFirst
-    ? (ch.title ? `<h2 class="book-chapter-title">${escapeHTML(ch.title)}</h2>` : "")
-    : (ch.title ? `<div class="book-running-head">${escapeHTML(ch.title)}</div>` : "");
-  return `${head}<div class="prose">${innerHTML}</div>`;
+function buildChapterHTML(ch){
+  const head = ch.title ? `<h2 class="book-chapter-title">${escapeHTML(ch.title)}</h2>` : "";
+  return `${head}<div class="prose">${paragraphizeBook(ch.text)}</div>`;
 }
 
-// Готовит скрытый элемент для измерения — те же стили/размеры, что и лист
-// книги, но невидимый и вне потока страницы.
-function getBookMeasurer(boxW, boxH){
-  let el = document.getElementById("book-measurer");
-  if(!el){
-    el = document.createElement("div");
-    el.id = "book-measurer";
-    document.body.appendChild(el);
-  }
-  el.className = "book";
-  el.style.position = "fixed";
-  el.style.visibility = "hidden";
-  el.style.pointerEvents = "none";
-  el.style.left = "-9999px";
-  el.style.top = "0";
-  el.style.right = "auto";
-  el.style.bottom = "auto";
-  el.style.margin = "0";
-  el.style.width = boxW + "px";
-  el.style.height = boxH + "px";
-  el.style.maxHeight = "none";
-  el.style.aspectRatio = "auto";
-  return el;
-}
+// ---- закладка: пользователь сам отмечает место на листе ----
+//
+// Закладка хранит {chapterIdx, ratio} — главу и долю высоты листа
+// (0..1), а не пиксели, поэтому она остаётся на своём месте даже если
+// текст переразложится при смене размера шрифта/окна. Отдельно, без
+// закладки, запоминается просто последняя открытая глава — чтобы
+// раздел открывался не всегда с первой главы, даже если закладку
+// никто не ставил.
+const BOOK_BOOKMARK_KEY = "book-bookmark";
+const BOOK_LAST_CHAPTER_KEY = "book-last-chapter";
 
-// Раскладывает все главы по страницам, которые реально помещаются в лист
-// книги при текущем размере экрана.
-function computeBookPages(){
-  const chapters = bookChapters();
-  const book = document.getElementById("book");
-  if(!book) return null;
-  const boxW = book.clientWidth, boxH = book.clientHeight;
-  if(!boxW || !boxH) return null;
-  if(!chapters.length) return [];
-
-  const measurer = getBookMeasurer(boxW, boxH);
-  const fits = html => { measurer.innerHTML = html; return measurer.scrollHeight <= boxH + 1; };
-
-  const pages = [];
-
-  chapters.forEach((ch, chapterIdx) => {
-    const blocks = textToBlocks(ch.text);
-    let pageBlocks = [];
-    let isFirst = true;
-    let hasContent = false;
-    let firstParaOfChapter = true;
-
-    const flush = () => {
-      pages.push({ chapterIdx, isFirst, html: buildPageHTML(ch, isFirst, pageBlocks.join("")) });
-      pageBlocks = [];
-      isFirst = false;
-      hasContent = false;
-    };
-
-    if(!blocks.length){ flush(); return; }
-
-    blocks.forEach(block => {
-      if(block.type === "image"){
-        const candidate = pageBlocks.concat(block.html);
-        if(fits(buildPageHTML(ch, isFirst, candidate.join("")))){
-          pageBlocks = candidate; hasContent = true;
-        }else{
-          if(hasContent) flush();
-          pageBlocks = [block.html];
-          hasContent = true;
-          // если картинка сама по себе крупнее листа — оставляем как есть,
-          // её размер всё равно ограничен по ширине/высоте в CSS
-        }
-        return;
-      }
-
-      const isFirstPara = firstParaOfChapter;
-      firstParaOfChapter = false;
-      const openCls = isFirstPara ? ' class="first"' : "";
-
-      const whole = `<p${openCls}>${block.html}</p>`;
-      const candidateWhole = pageBlocks.concat(whole);
-      if(fits(buildPageHTML(ch, isFirst, candidateWhole.join("")))){
-        pageBlocks = candidateWhole; hasContent = true; return;
-      }
-
-      // Абзац целиком не помещается — переносим его между листами по словам,
-      // как переносится текст в обычной книге.
-      let tokens = block.words.slice();
-      let isParaStart = true;
-      while(tokens.length){
-        let lo = 1, hi = tokens.length, best = 0;
-        while(lo <= hi){
-          const mid = (lo + hi) >> 1;
-          const cls = isParaStart ? openCls : ' class="cont"';
-          const piece = `<p${cls}>${tokens.slice(0, mid).join("")}</p>`;
-          if(fits(buildPageHTML(ch, isFirst, pageBlocks.concat(piece).join("")))){ best = mid; lo = mid + 1; }
-          else hi = mid - 1;
-        }
-        if(best === 0){
-          if(hasContent){ flush(); continue; }
-          best = 1; // пустой лист не может остаться пустым — не даём зависнуть
-        }
-        const cls = isParaStart ? openCls : ' class="cont"';
-        pageBlocks.push(`<p${cls}>${tokens.slice(0, best).join("")}</p>`);
-        hasContent = true;
-        tokens = tokens.slice(best);
-        isParaStart = false;
-        if(tokens.length) flush();
-      }
-    });
-
-    if(hasContent || isFirst) flush();
-  });
-
-  return pages;
-}
-
-// Запоминаем примерное место чтения (глава + номер листа внутри главы),
-// чтобы после пересчёта (например, при изменении размера окна) остаться
-// примерно там же, а не отбрасывать читателя в начало.
-function currentPageMemo(){
-  const p = bookComputed[bookIndex];
-  if(!p) return null;
-  let local = 0;
-  for(let i = bookIndex - 1; i >= 0 && bookComputed[i].chapterIdx === p.chapterIdx; i--) local++;
-  return { chapterIdx: p.chapterIdx, local };
-}
-
-// Запоминаем место чтения между перезагрузками страницы (localStorage),
-// чтобы читатель всегда возвращался туда, где остановился.
-const BOOK_PROGRESS_KEY = "book-progress";
-function loadBookProgress(){
+function loadBookmark(){
   try{
-    const raw = localStorage.getItem(BOOK_PROGRESS_KEY);
+    const raw = localStorage.getItem(BOOK_BOOKMARK_KEY);
     if(!raw) return null;
     const obj = JSON.parse(raw);
-    if(obj && Number.isInteger(obj.chapterIdx) && Number.isInteger(obj.local)) return obj;
-  }catch(e){ /* localStorage недоступен — просто не восстанавливаем место */ }
+    if(obj && Number.isInteger(obj.chapterIdx) && typeof obj.ratio === "number") return obj;
+  }catch(e){ /* localStorage недоступен — просто без закладки */ }
   return null;
 }
-function saveBookProgress(){
-  const memo = currentPageMemo();
-  if(!memo) return;
-  try{ localStorage.setItem(BOOK_PROGRESS_KEY, JSON.stringify(memo)); }
-  catch(e){ /* не критично, если сохранить не удалось */ }
+function saveBookmark(chapterIdx, ratio){
+  try{
+    localStorage.setItem(BOOK_BOOKMARK_KEY, JSON.stringify({
+      chapterIdx, ratio: Math.max(0, Math.min(1, ratio))
+    }));
+  }catch(e){ /* не критично, если сохранить не удалось */ }
+}
+function clearBookmark(){
+  try{ localStorage.removeItem(BOOK_BOOKMARK_KEY); }catch(e){}
+  updateRibbonUI();
+}
+function loadLastChapter(){
+  try{
+    const raw = localStorage.getItem(BOOK_LAST_CHAPTER_KEY);
+    if(raw === null) return null;
+    const n = Number(raw);
+    return Number.isInteger(n) ? n : null;
+  }catch(e){ return null; }
+}
+function saveLastChapter(idx){
+  try{ localStorage.setItem(BOOK_LAST_CHAPTER_KEY, String(idx)); }
+  catch(e){ /* не критично */ }
 }
 
-function paginateAndRender(){
-  const memo = currentPageMemo() || loadBookProgress();
-  const computed = computeBookPages();
-  if(computed === null) return;
-  bookComputed = computed;
-  if(memo){
-    let idx = bookComputed.findIndex(p => p.chapterIdx === memo.chapterIdx);
-    if(idx !== -1){
-      let steps = memo.local;
-      while(steps > 0 && bookComputed[idx + 1] && bookComputed[idx + 1].chapterIdx === memo.chapterIdx){ idx++; steps--; }
-    }
-    bookIndex = idx === -1 ? 0 : idx;
-  }
-  renderBookPageDOM();
-  saveBookProgress();
+// Прокручивает страницу так, чтобы указанная доля высоты текущего листа
+// оказалась чуть ниже верхнего края экрана (а не впритык к нему).
+function scrollToRatio(ratio, smooth){
+  const book = document.getElementById("book");
+  if(!book) return;
+  const rect = book.getBoundingClientRect();
+  const targetY = window.scrollY + rect.top + ratio * book.offsetHeight - 90;
+  window.scrollTo({ top: Math.max(0, targetY), behavior: smooth ? "smooth" : "auto" });
 }
 
-// ---- разметка раздела: один плоский лист, без анимации перелистывания.
-// Стрелки — снаружи блока с текстом. Оглавление — компактная всплывающая
-// панель поверх книги, открывается закладкой-ярлычком.
+function updateRibbonUI(){
+  const ribbon = document.getElementById("book-ribbon");
+  const clearBtn = document.getElementById("book-bookmark-clear");
+  if(!ribbon) return;
+  const bm = loadBookmark();
+  const onThisChapter = bm && bm.chapterIdx === bookChapterIdx;
+  ribbon.hidden = !onThisChapter;
+  if(onThisChapter) ribbon.style.height = (bm.ratio * 100) + "%";
+  if(clearBtn) clearBtn.hidden = !onThisChapter;
+}
+
+// ---- разметка раздела ----
+// Стрелки — полноширинными полосами НАД и ПОД листом (как переход
+// между главами на сайтах с мангой). Никакого счётчика "страница X из
+// Y" — только само пролистывание. Узкая полоса у правого края листа —
+// это "поле", по высоте которого можно кликнуть/тапнуть, чтобы
+// опустить туда ленточку-закладку.
 function renderBook(){
   return `
   <section class="view book-view">
     <h1 class="sr-only">Книга</h1>
     <div class="book-stage">
-      <button type="button" class="book-arrow book-arrow-prev" id="book-prev" aria-label="Предыдущая страница">&#10094;</button>
       <div class="book-wrap">
         <button type="button" class="book-toc-tab" id="book-toc-btn" aria-expanded="false">Оглавление</button>
         <div class="book-toc-panel" id="book-toc" hidden></div>
-        <div class="book" id="book" tabindex="0"></div>
+        <button type="button" class="book-bookmark-clear" id="book-bookmark-clear" hidden title="Убрать закладку">Убрать закладку ✕</button>
+
+        <button type="button" class="book-nav-btn book-nav-prev" id="book-prev" aria-label="Предыдущая глава">
+          <span class="book-nav-arrow">&#9650;</span><span>Предыдущая глава</span>
+        </button>
+
+        <div class="book-surface">
+          <div class="book" id="book" tabindex="0"></div>
+          <div class="book-margin" id="book-margin" title="Нажмите на поле, чтобы отметить закладкой это место"></div>
+          <div class="book-ribbon" id="book-ribbon" hidden title="Нажмите, чтобы вернуться к закладке"></div>
+        </div>
+
+        <button type="button" class="book-nav-btn book-nav-next" id="book-next" aria-label="Следующая глава">
+          <span>Следующая глава</span><span class="book-nav-arrow">&#9660;</span>
+        </button>
       </div>
-      <button type="button" class="book-arrow book-arrow-next" id="book-next" aria-label="Следующая страница">&#10095;</button>
     </div>
-    <div class="book-pageno" id="book-pageno"></div>
   </section>`;
 }
 
 function renderBookPageDOM(){
   const pageEl = document.getElementById("book");
   if(!pageEl) return;
-  if(!bookComputed.length){
+  const chapters = bookChapters();
+  if(!chapters.length){
     pageEl.innerHTML = `<p class="empty">Глав пока нет — добавьте их в админке, в разделе «Книга».</p>`;
     updateBookControls();
+    updateRibbonUI();
     return;
   }
-  bookIndex = Math.max(0, Math.min(bookIndex, bookComputed.length - 1));
-  pageEl.innerHTML = bookComputed[bookIndex].html;
+  bookChapterIdx = Math.max(0, Math.min(bookChapterIdx, chapters.length - 1));
+  pageEl.innerHTML = buildChapterHTML(chapters[bookChapterIdx]);
   updateBookControls();
+  updateRibbonUI();
+  saveLastChapter(bookChapterIdx);
 }
 
 function updateBookControls(){
   const chapters = bookChapters();
-  const pageno = document.getElementById("book-pageno");
-  if(pageno){
-    if(!bookComputed.length){
-      pageno.textContent = "";
-    }else{
-      const page = bookComputed[bookIndex];
-      let local = 0;
-      for(let i = 0; i < bookIndex; i++){ if(bookComputed[i].chapterIdx === page.chapterIdx) local++; }
-      const inChapter = bookComputed.filter(p => p.chapterIdx === page.chapterIdx).length;
-      pageno.textContent = `Глава ${page.chapterIdx + 1} из ${chapters.length} · лист ${local + 1} из ${inChapter}`;
-    }
-  }
   const prev = document.getElementById("book-prev");
   const next = document.getElementById("book-next");
-  if(prev) prev.disabled = bookIndex <= 0;
-  if(next) next.disabled = !bookComputed.length || bookIndex >= bookComputed.length - 1;
+  if(prev) prev.disabled = bookChapterIdx <= 0;
+  if(next) next.disabled = !chapters.length || bookChapterIdx >= chapters.length - 1;
 }
 
-function turnBookPage(dir){
-  if(!bookComputed.length) return;
-  const target = bookIndex + dir;
-  if(target < 0 || target >= bookComputed.length) return;
-  bookIndex = target;
+function changeChapter(dir){
+  const chapters = bookChapters();
+  if(!chapters.length) return;
+  const target = bookChapterIdx + dir;
+  if(target < 0 || target >= chapters.length) return;
+  bookChapterIdx = target;
   renderBookPageDOM();
-  saveBookProgress();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function goToChapter(idx){
+  const chapters = bookChapters();
+  if(idx < 0 || idx >= chapters.length) return;
+  bookChapterIdx = idx;
+  renderBookPageDOM();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function renderBookTOC(){
@@ -1038,9 +949,7 @@ function renderBookTOC(){
   `).join("")}</ol>`;
   el.querySelectorAll(".book-toc-item").forEach(btn => {
     btn.addEventListener("click", () => {
-      const idx = Number(btn.dataset.chapter);
-      const target = bookComputed.findIndex(p => p.chapterIdx === idx);
-      if(target !== -1){ bookIndex = target; renderBookPageDOM(); saveBookProgress(); }
+      goToChapter(Number(btn.dataset.chapter));
       closeBookTOC();
     });
   });
@@ -1061,23 +970,63 @@ function closeBookTOC(){
   if(btn) btn.setAttribute("aria-expanded", "false");
 }
 
+// Клик/тап по узкому полю у края листа — опускает туда ленточку-закладку
+// на высоту клика (в долях от высоты текущего листа).
+function onBookMarginClick(e){
+  const margin = document.getElementById("book-margin");
+  if(!margin) return;
+  const rect = margin.getBoundingClientRect();
+  const ratio = (e.clientY - rect.top) / rect.height;
+  saveBookmark(bookChapterIdx, ratio);
+  updateRibbonUI();
+  const ribbon = document.getElementById("book-ribbon");
+  if(ribbon){
+    ribbon.classList.remove("book-ribbon--pulse");
+    void ribbon.offsetWidth; // перезапускаем анимацию
+    ribbon.classList.add("book-ribbon--pulse");
+  }
+}
+
 function attachBookHandlers(){
   bookTocOpen = false;
   renderBookTOC();
-  paginateAndRender();
+
+  const chapters = bookChapters();
+  const bm = loadBookmark();
+  const last = loadLastChapter();
+  if(bm && chapters[bm.chapterIdx]) bookChapterIdx = bm.chapterIdx;
+  else if(last !== null && chapters[last]) bookChapterIdx = last;
+  else bookChapterIdx = 0;
+
+  renderBookPageDOM();
+
+  // При заходе в раздел, если на открытой главе есть закладка — сразу
+  // показываем то место, где читатель остановился в прошлый раз.
+  if(bm && bm.chapterIdx === bookChapterIdx){
+    requestAnimationFrame(() => requestAnimationFrame(() => scrollToRatio(bm.ratio, false)));
+  }
 
   const book = document.getElementById("book");
+  const margin = document.getElementById("book-margin");
+  const ribbon = document.getElementById("book-ribbon");
+  const clearBtn = document.getElementById("book-bookmark-clear");
   const prevBtn = document.getElementById("book-prev");
   const nextBtn = document.getElementById("book-next");
   const tocBtn = document.getElementById("book-toc-btn");
-  if(prevBtn) prevBtn.addEventListener("click", () => turnBookPage(-1));
-  if(nextBtn) nextBtn.addEventListener("click", () => turnBookPage(1));
+  if(prevBtn) prevBtn.addEventListener("click", () => changeChapter(-1));
+  if(nextBtn) nextBtn.addEventListener("click", () => changeChapter(1));
   if(tocBtn) tocBtn.addEventListener("click", toggleBookTOC);
+  if(margin) margin.addEventListener("click", onBookMarginClick);
+  if(ribbon) ribbon.addEventListener("click", () => {
+    const cur = loadBookmark();
+    if(cur && cur.chapterIdx === bookChapterIdx) scrollToRatio(cur.ratio, true);
+  });
+  if(clearBtn) clearBtn.addEventListener("click", clearBookmark);
   if(!book) return;
 
   book.addEventListener("keydown", e => {
-    if(e.key === "ArrowRight"){ e.preventDefault(); turnBookPage(1); }
-    else if(e.key === "ArrowLeft"){ e.preventDefault(); turnBookPage(-1); }
+    if(e.key === "ArrowRight"){ e.preventDefault(); changeChapter(1); }
+    else if(e.key === "ArrowLeft"){ e.preventDefault(); changeChapter(-1); }
     else if(e.key === "Escape" && bookTocOpen){ closeBookTOC(); }
   });
 
@@ -1092,8 +1041,8 @@ function attachBookHandlers(){
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
     touchStartX = null; touchStartY = null;
-    if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
-    turnBookPage(dx < 0 ? 1 : -1);
+    if(Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    changeChapter(dx < 0 ? 1 : -1);
   }, { passive:true });
 }
 
@@ -1106,20 +1055,6 @@ document.addEventListener("click", e => {
   if(toc.contains(e.target) || (tab && tab.contains(e.target))) return;
   closeBookTOC();
 });
-
-// Пересчитываем разбиение по листам при изменении размера окна (например,
-// поворот телефона) и после подгрузки шрифтов — размеры листа могли
-// измениться. Слушатели общие на весь сайт, но реально что-то делают,
-// только когда открыт раздел "Книга".
-let bookResizeTimer = null;
-window.addEventListener("resize", () => {
-  if(!document.getElementById("book")) return;
-  clearTimeout(bookResizeTimer);
-  bookResizeTimer = setTimeout(paginateAndRender, 150);
-});
-if(document.fonts && document.fonts.ready){
-  document.fonts.ready.then(() => { if(document.getElementById("book")) paginateAndRender(); });
-}
 
 function renderNotFound(){
   return `
