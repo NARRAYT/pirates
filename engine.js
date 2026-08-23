@@ -851,15 +851,15 @@ function scrollToRatio(ratio, smooth){
 // (загрузка страницы, переход в раздел, смена главы). Без этого флага
 // (клик по полю, чтобы отметить место) высота меняется плавно, "лента
 // поднимается до курсора", а не перескакивает к отметке рывком.
-// Лента видна всегда: если на текущей главе закладки ещё нет, она
-// висит коротким язычком (высота задаётся в CSS по умолчанию) — это
-// и есть подсказка, что сюда можно кликнуть и поставить закладку.
+// Если на текущей главе закладки нет — лента просто скрыта.
 function updateRibbonUI(instant){
   const ribbon = document.getElementById("book-ribbon");
   if(!ribbon) return;
   const bm = loadBookmark();
   const onThisChapter = bm && bm.chapterIdx === bookChapterIdx;
-  const targetHeight = onThisChapter ? (bm.ratio * 100) + "%" : "";
+  ribbon.hidden = !onThisChapter;
+  if(!onThisChapter) return;
+  const targetHeight = (bm.ratio * 100) + "%";
   if(instant){
     ribbon.classList.add("book-ribbon--instant");
     ribbon.style.height = targetHeight;
@@ -903,7 +903,7 @@ function renderBook(){
           <button type="button" class="book-toc-tab" id="book-toc-btn" aria-expanded="false">Оглавление</button>
           <div class="book" id="book" tabindex="0"></div>
           <div class="book-margin" id="book-margin" title="Нажмите на поле, чтобы отметить закладкой это место"></div>
-          <div class="book-ribbon" id="book-ribbon" title="Нажмите, чтобы поставить закладку"></div>
+          <div class="book-ribbon" id="book-ribbon" hidden title="Нажмите, чтобы поставить закладку"></div>
         </div>
 
         ${renderBookNavRow("bottom")}
@@ -1006,8 +1006,12 @@ function attachBookHandlers(){
   const chapters = bookChapters();
   const bm = loadBookmark();
   const last = loadLastChapter();
-  if(bm && chapters[bm.chapterIdx]) bookChapterIdx = bm.chapterIdx;
-  else if(last !== null && chapters[last]) bookChapterIdx = last;
+  // Приоритет — последняя открытая глава: именно на ней читатель
+  // остановился, даже если закладка стоит на другой, более ранней
+  // главе. Закладка используется как запасной вариант только если
+  // последняя глава ещё не запомнена (например, самый первый заход).
+  if(last !== null && chapters[last]) bookChapterIdx = last;
+  else if(bm && chapters[bm.chapterIdx]) bookChapterIdx = bm.chapterIdx;
   else bookChapterIdx = 0;
 
   renderBookPageDOM();

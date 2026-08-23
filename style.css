@@ -665,10 +665,7 @@ button{ font-family: var(--font-body); cursor:pointer; }
   top:0;
   right:6px;
   width:24px;
-  /* по умолчанию (закладка ещё не поставлена) — короткий язычок,
-     примерно до нижней границы вкладки «Оглавление»: сразу видно,
-     что сюда можно кликнуть и опустить закладку ниже */
-  height:34px;
+  height:30%;
   cursor:pointer;
   z-index:2;
   transition: height .45s cubic-bezier(.2,.8,.3,1);
