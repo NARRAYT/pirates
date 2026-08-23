@@ -33,6 +33,20 @@ function escapeHTML(str){
   }[s]));
 }
 
+/* Вытаскиваем из текста теги <img src="..."> ДО экранирования, чтобы
+   картинки, вставленные через подсказку в админке, реально показывались,
+   а весь остальной текст (в т.ч. случайно введённые < и >) оставался
+   безопасным текстом, а не выполнялся как HTML. */
+function extractImages(raw){
+  const found = [];
+  const withPlaceholders = raw.replace(/<img\s+[^<>]*?src\s*=\s*["']([^"']+)["'][^<>]*?>/gi, (m, src) => {
+    const idx = found.length;
+    found.push(`<img class="prose-img" src="${escapeHTML(src.trim())}" alt="" loading="lazy">`);
+    return `\u0000IMG${idx}\u0000`;
+  });
+  return { withPlaceholders, found };
+}
+
 function restoreImages(escapedText, found){
   return escapedText.replace(/\u0000IMG(\d+)\u0000/g, (m, i) => found[Number(i)] ?? "");
 }
@@ -196,19 +210,23 @@ function renderMap(){
               <div class="map-pin" data-id="${loc.id}" data-name="${escapeHTML(loc.name.toLowerCase())}" style="left:${loc.mapX}%; top:${loc.mapY}%;">
                 <button class="map-pin-dot" type="button" aria-label="${escapeHTML(loc.name)} — открыть карточку"></button>
                 <span class="map-pin-label">${escapeHTML(loc.name)}</span>
-                <div class="map-pin-card">
-                  ${imgTag(loc.image, loc.id, loc.name, "thumb")}
-                  <div class="map-pin-card-body">
-                    <span class="card-type">${escapeHTML(loc.type)}</span>
-                    <h3>${escapeHTML(loc.name)}</h3>
-                    <p class="card-desc">${escapeHTML(loc.short)}</p>
-                    <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
-                  </div>
-                </div>
               </div>
             `).join("")}
           </div>
         </div>
+      </div>
+      <div class="map-pin-cards" id="map-pin-cards">
+        ${pinned.map(loc => `
+          <div class="map-pin-card" data-id="${loc.id}">
+            ${imgTag(loc.image, loc.id, loc.name, "thumb")}
+            <div class="map-pin-card-body">
+              <span class="card-type">${escapeHTML(loc.type)}</span>
+              <h3>${escapeHTML(loc.name)}</h3>
+              <p class="card-desc">${escapeHTML(loc.short)}</p>
+              <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
+            </div>
+          </div>
+        `).join("")}
       </div>
       ` : `<div class="map-placeholder">Картинки вообще нет.</div>`}
     </div>
@@ -226,6 +244,7 @@ function renderMap(){
 }
 
 let mapDocClickAttached = false;
+let mapResizeAttached = false;
 
 // ---- зум и панорамирование карты ----
 let mapZoom = 1;
@@ -250,6 +269,43 @@ function applyMapTransform(){
   clampMapPan(viewport.getBoundingClientRect());
   inner.style.transform = `translate(${mapPanX}px, ${mapPanY}px) scale(${mapZoom})`;
   inner.style.setProperty("--map-zoom", mapZoom);
+  repositionOpenMapCard();
+}
+
+/* Карточки меток вынесены из .map-zoom-viewport (у него overflow:hidden,
+   чтобы обрезать саму карту при зуме/панораме) в отдельный слой .map-pin-cards,
+   лежащий поверх всей карты без обрезки. Здесь мы просто на лету считаем
+   экранные координаты нужной метки и подставляем их карточке через left/top. */
+function positionMapCard(card, dot){
+  const wrap = document.getElementById("map-wrap");
+  if(!wrap || !card || !dot) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  const dotRect = dot.getBoundingClientRect();
+  const x = dotRect.left + dotRect.width / 2 - wrapRect.left;
+  const y = dotRect.top - wrapRect.top;
+  card.style.left = `${x}px`;
+  card.style.top = `${y - 12}px`;
+}
+
+function openMapCard(id){
+  const dot = document.querySelector(`.map-pin[data-id="${CSS.escape(id)}"] .map-pin-dot`);
+  const card = document.querySelector(`.map-pin-card[data-id="${CSS.escape(id)}"]`);
+  if(!dot || !card) return;
+  positionMapCard(card, dot);
+  card.classList.add("open");
+}
+
+function closeAllMapCards(){
+  document.querySelectorAll(".map-pin.open").forEach(p => p.classList.remove("open"));
+  document.querySelectorAll(".map-pin-card.open").forEach(c => c.classList.remove("open"));
+}
+
+function repositionOpenMapCard(){
+  const openPin = document.querySelector(".map-pin.open");
+  if(!openPin) return;
+  const dot = openPin.querySelector(".map-pin-dot");
+  const card = document.querySelector(`.map-pin-card[data-id="${CSS.escape(openPin.dataset.id)}"]`);
+  positionMapCard(card, dot);
 }
 
 function syncMapZoomUI(){
@@ -390,14 +446,19 @@ function attachMapHandlers(){
     e.stopPropagation();
     const pin = dot.closest(".map-pin");
     const wasOpen = pin.classList.contains("open");
-    wrap.querySelectorAll(".map-pin.open").forEach(p => p.classList.remove("open"));
-    if(!wasOpen) pin.classList.add("open");
+    closeAllMapCards();
+    if(!wasOpen){
+      pin.classList.add("open");
+      openMapCard(pin.dataset.id);
+    }
   });
   if(!mapDocClickAttached){
-    document.addEventListener("click", () => {
-      document.querySelectorAll(".map-pin.open").forEach(p => p.classList.remove("open"));
-    });
+    document.addEventListener("click", closeAllMapCards);
     mapDocClickAttached = true;
+  }
+  if(!mapResizeAttached){
+    window.addEventListener("resize", repositionOpenMapCard);
+    mapResizeAttached = true;
   }
   const search = document.getElementById("map-search");
   if(search){

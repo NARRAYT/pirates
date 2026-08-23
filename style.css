@@ -399,6 +399,11 @@ button{ font-family: var(--font-body); cursor:pointer; }
 
 .prose{ max-width: 72ch; }
 .prose p{ margin:0 0 1em; }
+.prose-img{
+  /* без оформления — просто картинка, как её вставили в тексте админки */
+  max-width:100%;
+  height:auto;
+}
 .note-card .prose{ max-width:none; }
 
 .gallery{
@@ -627,6 +632,12 @@ footer.site-foot{
   text-align:center; padding:24px;
 }
 .map-pins{ position:absolute; inset:0; }
+
+/* Слой карточек лежит НЕ внутри .map-zoom-viewport (у него overflow:hidden,
+   чтобы обрезать саму карту при зуме), а прямо в .map-wrap — поверх карты,
+   так что зумом/панорамой карточки больше не обрезаются. Сам слой прозрачен
+   для кликов, кликабельны только открытые карточки внутри него. */
+.map-pin-cards{ position:absolute; inset:0; pointer-events:none; z-index:40; }
 /* пины и их подписи не растут вместе с картой — держим их читаемый размер
    независимо от масштаба, компенсируя зум обратным scale() */
 .map-pin{
@@ -687,19 +698,20 @@ footer.site-foot{
 .map-pin-card{
   display:none;
   position:absolute;
-  bottom: 28px; left:50%;
-  transform: translateX(-50%);
+  left:0; top:0;
+  transform: translate(-50%, -100%);
+  pointer-events:auto;
   width:350px;
   background: var(--parchment-light);
   border:1px solid var(--parchment-dark);
   box-shadow: 0 12px 26px rgba(0,0,0,.6);
   padding:12px 14px;
-  z-index:30;
   text-align:left;
   flex-direction:row;
   align-items:flex-start;
   gap:12px;
 }
+.map-pin-card.open{ display:flex; }
 .map-pin-card img.thumb{
   width:130px; height:150px; flex:0 0 auto;
   object-fit:cover;
@@ -717,7 +729,6 @@ footer.site-foot{
 .map-pin-card-body h3{ margin:0; font-size:.96rem; line-height:1.2; }
 .map-pin-card-body .card-desc{ font-size:.8rem; line-height:1.35; margin:0; color: var(--ink-soft); }
 .map-pin-card-body .btn{ display:inline-block; margin-top:2px; align-self:flex-start; }
-.map-pin.open .map-pin-card{ display:flex; }
 
 /* keep an open pin above its neighbours */
 .map-pin.open{ z-index:25; }
