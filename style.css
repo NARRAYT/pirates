@@ -484,10 +484,10 @@ button{ font-family: var(--font-body); cursor:pointer; }
 
 /* ---------- книга (главы; один лист на главу, высота свободная) ----------
    Один разворот = одна глава целиком, лист сам вытягивается под весь
-   текст (высота не задана — только ширина). Пролистывание — по главам,
-   стрелки-полосы стоят СВЕРХУ и СНИЗУ от листа, как переход между
-   главами на сайтах с мангой, поэтому на телефоне им просто некуда
-   "срываться вниз". */
+   текст (высота не задана — только ширина). Пролистывание — по главам:
+   компактные кнопки "назад"/"вперёд" стоят по центру, НАД и ПОД листом,
+   приклеенные прямо к его краю — как и ярлычок оглавления, а не
+   отдельная широкая полоса, которая бы отодвигала ярлычок от книги. */
 .book-stage{
   display:flex;
   justify-content:center;
@@ -496,43 +496,62 @@ button{ font-family: var(--font-body); cursor:pointer; }
 
 .book-wrap{
   position:relative;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
   width:930px;
   max-width:100%;
   margin:0 auto;
+  /* запас сверху/снизу под кнопки-стрелки и ярлычок оглавления —
+     они "приклеены" к листу абсолютным позиционированием и сами
+     места не занимают */
+  padding: 44px 0;
 }
 
-/* полосы-переключатели глав — над и под листом, во всю его ширину;
-   в каждой полосе — обе кнопки, "назад" и "вперёд" */
-.book-nav-row{
-  display:flex;
-  gap:8px;
+/* обёртка листа: сам лист (.book) растягивает её по высоте (он
+   единственный элемент в потоке — поле, ленточка, ярлычок и стрелки
+   вынесены абсолютным позиционированием и высоту не задают), всё
+   остальное накладывается поверх него по его фактической высоте. */
+.book-surface{
+  position:relative;
 }
+
+/* компактные кнопки-стрелки — по центру, НАД и ПОД листом, вплотную
+   к его краю (не во всю ширину — короткая табличка, как ярлычок
+   оглавления, а не разделительная полоса) */
+.book-nav-row{
+  position:absolute;
+  left:50%;
+  display:flex;
+  gap:6px;
+  z-index:3;
+}
+.book-nav-row--top{ top:0; transform: translate(-50%, calc(-100% - 8px)); }
+.book-nav-row--bottom{ bottom:0; transform: translate(-50%, calc(100% + 8px)); }
 .book-nav-btn{
-  flex:1 1 0;
+  flex:0 0 auto;
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:8px;
-  padding:10px;
+  gap:6px;
+  padding:7px 12px;
   font-family: var(--font-stamp);
-  font-size:.72rem;
-  letter-spacing:.1em;
+  font-size:.66rem;
+  letter-spacing:.06em;
   text-transform:uppercase;
+  white-space:nowrap;
   color: var(--parchment-light);
-  background: rgba(0,0,0,.22);
-  border:1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.4);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:3px;
   cursor:pointer;
   box-shadow:none;
   transition: color .15s ease, background .15s ease;
 }
 .book-nav-arrow{ font-size:.85em; line-height:1; }
-.book-nav-btn:hover:not(:disabled){ color:#fff; background: rgba(0,0,0,.34); }
+.book-nav-btn:hover:not(:disabled){ color:#fff; background: rgba(0,0,0,.6); }
 .book-nav-btn:disabled{ opacity:.3; cursor:default; }
 
-/* закладка-ярлычок, открывающая оглавление */
+/* закладка-ярлычок, открывающая оглавление — приклеена к самому
+   листу (правый верхний угол), рядом со стрелками, ничего их не
+   разделяет */
 .book-toc-tab{
   position:absolute;
   top:0;
@@ -586,14 +605,6 @@ button{ font-family: var(--font-body); cursor:pointer; }
 }
 .book-toc-item:last-child{ border-bottom:none; }
 .book-toc-item:hover{ color: var(--wax-red); }
-
-/* обёртка листа: сам лист (.book) растягивает её по высоте (он
-   единственный элемент в потоке — поле и ленточка вынесены абсолютным
-   позиционированием и высоту не задают), поле и ленточка накладываются
-   поверх него по всей его фактической высоте. */
-.book-surface{
-  position:relative;
-}
 
 /* сам лист — один плоский слой без 3D и перелистывания. Формат —
    крупный и вытянутый по вертикали, ближе к странице манги. ВЫСОТА
@@ -653,7 +664,9 @@ button{ font-family: var(--font-body); cursor:pointer; }
    с характерным треугольным вырезом на конце, как настоящая тканевая
    закладка. Кликабельная область (.book-ribbon) — простой прямоугольник
    БЕЗ вырезов, чтобы клик по краям ленты не проваливался в поле под ней;
-   сам вырез — чисто визуальный, рисуется через ::before. */
+   сам вырез — чисто визуальный, рисуется через ::before. Клик по ленте
+   переставляет закладку на высоту клика (а не листает страницу —
+   к отметке страница прокручивается только при заходе в раздел). */
 .book-ribbon{
   position:absolute;
   top:0;
