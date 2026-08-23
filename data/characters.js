@@ -4,8 +4,6 @@
    id            — уникальный код персонажа, латиницей, без пробелов
    name          — имя на странице
    role          — роль/должность
-   status        — один из: "alive" | "dead" | "unknown"
-   statusLabel   — подпись статуса, которая видна пользователю ("Жив" и т.п.)
    faction       — фракция/принадлежность
    locationId    — id локации из data/locations.js, или null
    shipId        — id корабля из data/ships.js, или null
@@ -28,7 +26,7 @@ window.SITE_DATA.characters = [
     "name": "Логан Лорец",
     "role": "Канонир",
     "faction": "Испания",
-    "locationId": "loc-siren-cove",
+    "locationId": null,
     "shipId": "ship-subbota",
     "tags": [
       "канонир"
@@ -36,20 +34,11 @@ window.SITE_DATA.characters = [
     "image": "",
     "references": [
       {
-        "src": "",
-        "caption": "Референс костюма — капитанский плащ"
-      },
-      {
-        "src": "",
-        "caption": "Референс — абордажная сабля с гравировкой"
+        "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLXYtJs1VEL4u-N6CNZZy_9Uni9fspdzJJonBl9RdMK0NlyaQjVdfQr83y&s=10",
+        "caption": "Референс"
       }
     ],
-    "arts": [
-      {
-        "src": "",
-        "caption": "Портрет за штурвалом"
-      }
-    ],
+    "arts": [],
     "shortBio": "сяусяуся",
     "biography": "мимуимиуи",
     "historyNotes": "инфо инфо инфо"
