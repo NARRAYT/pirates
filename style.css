@@ -540,7 +540,7 @@ button{ font-family: var(--font-body); cursor:pointer; }
    настоящий бумажный ярлычок, торчащий из-за страницы */
 .book-toc-tab{
   position:absolute;
-  top:0;
+  top:-4px;
   right:22px;
   transform: translateY(-62%);
   font-family: var(--font-stamp);
@@ -556,13 +556,12 @@ button{ font-family: var(--font-body); cursor:pointer; }
   cursor:pointer;
   transition: background .15s ease;
 }
-.book-toc-tab:hover{ filter:brightness(1.15); }
-.book-toc-tab[aria-expanded="true"]{ background: var(--leather-dark); }
+.book-toc-tab:hover{ filter:brightness(0.15); }
 
 /* оглавление — компактная панель, всплывающая ПОВЕРХ книги */
 .book-toc-panel{
   position:absolute;
-  top:10px;
+  top:43px;
   right:16px;
   z-index:4;
   min-width:220px;
