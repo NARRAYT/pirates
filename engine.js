@@ -824,10 +824,6 @@ function saveBookmark(chapterIdx, ratio){
     }));
   }catch(e){ /* не критично, если сохранить не удалось */ }
 }
-function clearBookmark(){
-  try{ localStorage.removeItem(BOOK_BOOKMARK_KEY); }catch(e){}
-  updateRibbonUI();
-}
 function loadLastChapter(){
   try{
     const raw = localStorage.getItem(BOOK_LAST_CHAPTER_KEY);
@@ -853,21 +849,32 @@ function scrollToRatio(ratio, smooth){
 
 function updateRibbonUI(){
   const ribbon = document.getElementById("book-ribbon");
-  const clearBtn = document.getElementById("book-bookmark-clear");
   if(!ribbon) return;
   const bm = loadBookmark();
   const onThisChapter = bm && bm.chapterIdx === bookChapterIdx;
   ribbon.hidden = !onThisChapter;
   if(onThisChapter) ribbon.style.height = (bm.ratio * 100) + "%";
-  if(clearBtn) clearBtn.hidden = !onThisChapter;
 }
 
 // ---- разметка раздела ----
 // Стрелки — полноширинными полосами НАД и ПОД листом (как переход
-// между главами на сайтах с мангой). Никакого счётчика "страница X из
-// Y" — только само пролистывание. Узкая полоса у правого края листа —
-// это "поле", по высоте которого можно кликнуть/тапнуть, чтобы
-// опустить туда ленточку-закладку.
+// между главами на сайтах с мангой), в каждой полосе — обе кнопки,
+// "назад" и "вперёд". Никакого счётчика "страница X из Y" — только
+// само пролистывание. Узкая полоса у правого края листа — это "поле",
+// по высоте которого можно кликнуть/тапнуть, чтобы опустить туда
+// ленточку-закладку.
+function renderBookNavRow(idPrefix){
+  return `
+  <div class="book-nav-row">
+    <button type="button" class="book-nav-btn" id="book-prev-${idPrefix}" aria-label="Предыдущая глава">
+      <span class="book-nav-arrow">&#10094;</span><span>Предыдущая глава</span>
+    </button>
+    <button type="button" class="book-nav-btn" id="book-next-${idPrefix}" aria-label="Следующая глава">
+      <span>Следующая глава</span><span class="book-nav-arrow">&#10095;</span>
+    </button>
+  </div>`;
+}
+
 function renderBook(){
   return `
   <section class="view book-view">
@@ -876,11 +883,8 @@ function renderBook(){
       <div class="book-wrap">
         <button type="button" class="book-toc-tab" id="book-toc-btn" aria-expanded="false">Оглавление</button>
         <div class="book-toc-panel" id="book-toc" hidden></div>
-        <button type="button" class="book-bookmark-clear" id="book-bookmark-clear" hidden title="Убрать закладку">Убрать закладку ✕</button>
 
-        <button type="button" class="book-nav-btn book-nav-prev" id="book-prev" aria-label="Предыдущая глава">
-          <span class="book-nav-arrow">&#9650;</span><span>Предыдущая глава</span>
-        </button>
+        ${renderBookNavRow("top")}
 
         <div class="book-surface">
           <div class="book" id="book" tabindex="0"></div>
@@ -888,9 +892,7 @@ function renderBook(){
           <div class="book-ribbon" id="book-ribbon" hidden title="Нажмите, чтобы вернуться к закладке"></div>
         </div>
 
-        <button type="button" class="book-nav-btn book-nav-next" id="book-next" aria-label="Следующая глава">
-          <span>Следующая глава</span><span class="book-nav-arrow">&#9660;</span>
-        </button>
+        ${renderBookNavRow("bottom")}
       </div>
     </div>
   </section>`;
@@ -915,10 +917,10 @@ function renderBookPageDOM(){
 
 function updateBookControls(){
   const chapters = bookChapters();
-  const prev = document.getElementById("book-prev");
-  const next = document.getElementById("book-next");
-  if(prev) prev.disabled = bookChapterIdx <= 0;
-  if(next) next.disabled = !chapters.length || bookChapterIdx >= chapters.length - 1;
+  const atStart = bookChapterIdx <= 0;
+  const atEnd = !chapters.length || bookChapterIdx >= chapters.length - 1;
+  document.querySelectorAll("#book-prev-top, #book-prev-bottom").forEach(btn => { btn.disabled = atStart; });
+  document.querySelectorAll("#book-next-top, #book-next-bottom").forEach(btn => { btn.disabled = atEnd; });
 }
 
 function changeChapter(dir){
@@ -1009,19 +1011,20 @@ function attachBookHandlers(){
   const book = document.getElementById("book");
   const margin = document.getElementById("book-margin");
   const ribbon = document.getElementById("book-ribbon");
-  const clearBtn = document.getElementById("book-bookmark-clear");
-  const prevBtn = document.getElementById("book-prev");
-  const nextBtn = document.getElementById("book-next");
   const tocBtn = document.getElementById("book-toc-btn");
-  if(prevBtn) prevBtn.addEventListener("click", () => changeChapter(-1));
-  if(nextBtn) nextBtn.addEventListener("click", () => changeChapter(1));
+  document.querySelectorAll("#book-prev-top, #book-prev-bottom").forEach(btn => {
+    btn.addEventListener("click", () => changeChapter(-1));
+  });
+  document.querySelectorAll("#book-next-top, #book-next-bottom").forEach(btn => {
+    btn.addEventListener("click", () => changeChapter(1));
+  });
   if(tocBtn) tocBtn.addEventListener("click", toggleBookTOC);
   if(margin) margin.addEventListener("click", onBookMarginClick);
-  if(ribbon) ribbon.addEventListener("click", () => {
+  if(ribbon) ribbon.addEventListener("click", e => {
+    e.stopPropagation();
     const cur = loadBookmark();
     if(cur && cur.chapterIdx === bookChapterIdx) scrollToRatio(cur.ratio, true);
   });
-  if(clearBtn) clearBtn.addEventListener("click", clearBookmark);
   if(!book) return;
 
   book.addEventListener("keydown", e => {

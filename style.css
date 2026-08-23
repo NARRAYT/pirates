@@ -504,14 +504,18 @@ button{ font-family: var(--font-body); cursor:pointer; }
   margin:0 auto;
 }
 
-/* полосы-переключатели глав — над и под листом, во всю его ширину */
+/* полосы-переключатели глав — над и под листом, во всю его ширину;
+   в каждой полосе — обе кнопки, "назад" и "вперёд" */
+.book-nav-row{
+  display:flex;
+  gap:8px;
+}
 .book-nav-btn{
-  flex:0 0 auto;
+  flex:1 1 0;
   display:flex;
   align-items:center;
   justify-content:center;
   gap:8px;
-  width:100%;
   padding:10px;
   font-family: var(--font-stamp);
   font-size:.72rem;
@@ -551,27 +555,6 @@ button{ font-family: var(--font-body); cursor:pointer; }
 }
 .book-toc-tab:hover{ filter:brightness(1.15); }
 .book-toc-tab[aria-expanded="true"]{ background: var(--leather-dark); }
-
-/* кнопка "убрать закладку" — рядом с ярлычком оглавления, видна только
-   когда на текущей главе стоит закладка */
-.book-bookmark-clear{
-  position:absolute;
-  top:0;
-  left:0;
-  transform: translateY(-100%);
-  font-family: var(--font-stamp);
-  font-size:.62rem;
-  letter-spacing:.06em;
-  padding:6px 10px;
-  border:1px solid var(--parchment-dark);
-  border-bottom:none;
-  border-radius:4px 4px 0 0;
-  background: var(--parchment-light);
-  color: var(--ink-soft);
-  cursor:pointer;
-  z-index:3;
-}
-.book-bookmark-clear:hover{ color: var(--wax-red); }
 
 /* оглавление — компактная панель, всплывающая ПОВЕРХ книги */
 .book-toc-panel{
@@ -668,22 +651,29 @@ button{ font-family: var(--font-body); cursor:pointer; }
 
 /* лента-закладка — свисает от верхнего края листа до отмеченного места,
    с характерным треугольным вырезом на конце, как настоящая тканевая
-   закладка */
+   закладка. Кликабельная область (.book-ribbon) — простой прямоугольник
+   БЕЗ вырезов, чтобы клик по краям ленты не проваливался в поле под ней;
+   сам вырез — чисто визуальный, рисуется через ::before. */
 .book-ribbon{
   position:absolute;
   top:0;
-  right:20px;
+  right:6px;
   width:24px;
   height:30%;
+  cursor:pointer;
+  z-index:2;
+}
+.book-ribbon::before{
+  content:'';
+  position:absolute;
+  inset:0;
   background: linear-gradient(180deg, #7a231b, var(--wax-red) 88%);
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), 50% 100%, 0 calc(100% - 16px));
   box-shadow: 0 2px 8px rgba(0,0,0,.45);
-  cursor:pointer;
-  z-index:2;
   transition: filter .15s ease;
 }
-.book-ribbon:hover{ filter:brightness(1.2); }
-.book-ribbon--pulse{ animation: book-ribbon-pulse .5s ease; }
+.book-ribbon:hover::before{ filter:brightness(1.2); }
+.book-ribbon--pulse::before{ animation: book-ribbon-pulse .5s ease; }
 @keyframes book-ribbon-pulse{
   0%{ filter:brightness(1.9); }
   100%{ filter:brightness(1); }
@@ -693,12 +683,14 @@ button{ font-family: var(--font-body); cursor:pointer; }
   .book{ padding:26px 40px 34px 26px; font-size:1rem; }
   .book-chapter-title{ font-size:1.2rem; }
   .book-toc-panel{ min-width:180px; }
-  .book-nav-btn{ font-size:.66rem; padding:9px; }
+  .book-nav-btn{ font-size:.62rem; padding:9px 6px; gap:5px; }
 }
 @media (max-width:460px){
   .book{ padding:20px 32px 26px 18px; font-size:.94rem; }
   .book-margin{ width:26px; }
-  .book-ribbon{ right:12px; width:18px; }
+  .book-ribbon{ right:4px; width:18px; }
+  .book-nav-btn{ font-size:.56rem; padding:8px 4px; }
+  .book-nav-btn span:not(.book-nav-arrow){ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 }
 
 footer.site-foot{
