@@ -70,14 +70,19 @@ window.SITE_DATA.characters = [
     "name": "Джереми",
     "role": "Говноед",
     "faction": "Британия",
-    "locationId": "loc-port-noire",
+    "locationId": null,
     "shipId": "ship-meri",
     "tags": [
       "Говноед",
       "капитан"
     ],
     "image": "",
-    "references": [],
+    "references": [
+      {
+        "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLXYtJs1VEL4u-N6CNZZy_9Uni9fspdzJJonBl9RdMK0NlyaQjVdfQr83y&s=10",
+        "caption": "референс"
+      }
+    ],
     "arts": [],
     "shortBio": "авыаыва",
     "biography": "жваыжажы",
