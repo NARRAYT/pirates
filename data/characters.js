@@ -31,7 +31,7 @@ window.SITE_DATA.characters = [
     "tags": [
       "канонир"
     ],
-    "image": "",
+    "image": "https://bugaga.ru/uploads/posts/2016-08/1470756070_koshki-piraty-4.jpg",
     "references": [
       {
         "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLXYtJs1VEL4u-N6CNZZy_9Uni9fspdzJJonBl9RdMK0NlyaQjVdfQr83y&s=10",
