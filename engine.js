@@ -171,14 +171,6 @@ function renderHome(){
       ${DATA.siteTagline ? `<p class="lede">${escapeHTML(DATA.siteTagline)}</p>` : ""}
     </div>
 
-    <div class="registry">
-      <div class="cell"><span class="n">${DATA.locations.length}</span><span class="l">Локации</span></div>
-      <div class="cell"><span class="n">${DATA.ships.length}</span><span class="l">Корабли</span></div>
-      <div class="cell"><span class="n">${DATA.characters.length}</span><span class="l">Персонажи</span></div>
-      <div class="cell"><span class="n">${DATA.historyTimeline.length}</span><span class="l">Вехи истории</span></div>
-      <div class="cell"><span class="n">${DATA.notes.length}</span><span class="l">Заметки</span></div>
-    </div>
-
     <h2>Общие сведения</h2>
     <div class="prose">${paragraphize(DATA.aboutInfo)}</div>
   </section>`;
