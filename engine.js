@@ -1006,12 +1006,12 @@ function attachBookHandlers(){
   const chapters = bookChapters();
   const bm = loadBookmark();
   const last = loadLastChapter();
-  // Приоритет — последняя открытая глава: именно на ней читатель
-  // остановился, даже если закладка стоит на другой, более ранней
-  // главе. Закладка используется как запасной вариант только если
-  // последняя глава ещё не запомнена (например, самый первый заход).
-  if(last !== null && chapters[last]) bookChapterIdx = last;
-  else if(bm && chapters[bm.chapterIdx]) bookChapterIdx = bm.chapterIdx;
+  // Приоритет — закладка: если она поставлена, заход/обновление
+  // страницы должны вести именно туда (глава + точная позиция на
+  // листе). Последняя открытая глава — запасной вариант на случай,
+  // если закладки нет вовсе.
+  if(bm && chapters[bm.chapterIdx]) bookChapterIdx = bm.chapterIdx;
+  else if(last !== null && chapters[last]) bookChapterIdx = last;
   else bookChapterIdx = 0;
 
   renderBookPageDOM();
