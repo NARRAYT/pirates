@@ -23,7 +23,7 @@ window.SITE_DATA = window.SITE_DATA || {};
 window.SITE_DATA.characters = [
   {
     "id": "char-logan",
-    "name": "Логан Лорец",
+    "name": "Логан Лоренц",
     "role": "Канонир",
     "faction": "Испания",
     "locationId": "loc-pab-grinkrou",
