@@ -4,8 +4,6 @@
    id            — уникальный код персонажа, латиницей, без пробелов
    name          — имя на странице
    role          — роль/должность
-   status        — один из: "alive" | "dead" | "unknown"
-   statusLabel   — подпись статуса, которая видна пользователю ("Жив" и т.п.)
    faction       — фракция/принадлежность
    locationId    — id локации из data/locations.js, или null
    shipId        — id корабля из data/ships.js, или null
@@ -27,17 +25,29 @@ window.SITE_DATA.characters = [
     "id": "char-logan",
     "name": "Логан Лорец",
     "role": "Канонир",
-    "status": "alive",
-    "statusLabel": "Жив",
     "faction": "Испания",
-    "locationId": "loc-pab-grinkrou",
+    "locationId": "loc-siren-cove",
     "shipId": "ship-subbota",
     "tags": [
       "канонир"
     ],
     "image": "",
-    "references": [],
-    "arts": [],
+    "references": [
+      {
+        "src": "",
+        "caption": "Референс костюма — капитанский плащ"
+      },
+      {
+        "src": "",
+        "caption": "Референс — абордажная сабля с гравировкой"
+      }
+    ],
+    "arts": [
+      {
+        "src": "",
+        "caption": "Портрет за штурвалом"
+      }
+    ],
     "shortBio": "сяусяуся",
     "biography": "мимуимиуи",
     "historyNotes": "инфо инфо инфо"
@@ -46,8 +56,6 @@ window.SITE_DATA.characters = [
     "id": "char-tomas",
     "name": "Томас Уэйнрайт",
     "role": "Капитан",
-    "status": "alive",
-    "statusLabel": "Жив",
     "faction": "Британия",
     "locationId": "loc-port-noire",
     "shipId": "ship-subbota",
@@ -65,8 +73,6 @@ window.SITE_DATA.characters = [
     "id": "char-dzheremi",
     "name": "Джереми",
     "role": "Говноед",
-    "status": "alive",
-    "statusLabel": "Жив",
     "faction": "Британия",
     "locationId": "loc-port-noire",
     "shipId": "ship-meri",
