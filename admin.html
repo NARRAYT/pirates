@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админка — Кодекс Чёрного Прилива</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* ---- служебные стили админки, поверх основной темы сайта ---- */
+  body{ font-size:16px; }
+  .admin-shell{ max-width:980px; margin:0 auto; padding:32px 20px 100px; }
+  .admin-head h1{ font-family:var(--font-head); color:var(--parchment-light); margin-bottom:.3em; }
+  .admin-head p{ max-width:70ch; }
+
+  .admin-card{
+    background: var(--parchment-light);
+    border:1px solid var(--parchment-dark);
+    box-shadow: 0 1px 0 rgba(255,255,255,.15) inset, 0 10px 22px var(--shadow);
+    padding:20px 22px;
+    margin:20px 0;
+    color: var(--ink);
+  }
+  .admin-card h2{ margin-top:0; }
+  .admin-card small{ color: var(--ink-soft); display:block; margin-top:2px; }
+
+  .admin-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+  @media (max-width:640px){ .admin-grid2{ grid-template-columns:1fr; } }
+
+  .admin-field{ display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
+  .admin-field > span{ font-family:var(--font-head); font-size:.82rem; letter-spacing:.03em; color:var(--ink-soft); }
+  .admin-field input[type="text"],
+  .admin-field input[type="number"],
+  .admin-field input[type="password"],
+  .admin-field select,
+  .admin-field textarea{
+    font-family: var(--font-body);
+    font-size:.98rem;
+    padding:8px 10px;
+    border:1px solid var(--ink-soft);
+    background:#fff;
+    color: var(--ink);
+    width:100%;
+  }
+  .admin-field textarea.mono{ font-family: var(--font-stamp); font-size:.85rem; line-height:1.5; }
+  .admin-field textarea{ resize:vertical; }
+
+  .admin-id-row{ display:flex; gap:8px; }
+  .admin-id-row input{ flex:1; }
+
+  .btn-sm{ padding:6px 10px; font-size:.68rem; }
+  .btn.danger, .btn-ghost.danger{ border-color:#7a2418; color:#7a2418; }
+
+  .admin-toolbar{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+
+  .admin-list{ display:flex; flex-direction:column; gap:8px; }
+  .admin-row{
+    display:flex; justify-content:space-between; align-items:center; gap:12px;
+    background: var(--parchment);
+    border:1px solid var(--parchment-dark);
+    padding:10px 14px;
+    color: var(--ink);
+  }
+  .admin-row-main{ display:flex; flex-direction:column; }
+  .admin-row-sub{ font-size:.78rem; color: var(--ink-soft); }
+  .admin-row-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+  .admin-empty{ color: var(--ink-soft); }
+
+  .admin-form h3{ margin-top:0; }
+  .admin-form-actions{ display:flex; gap:10px; margin-top:10px; }
+
+  .admin-pairs .admin-pairs-rows{ display:flex; flex-direction:column; gap:6px; margin:6px 0; }
+  .admin-pair-row{ display:flex; gap:6px; }
+  .admin-pair-row input{ flex:1; padding:6px 8px; border:1px solid var(--ink-soft); font-family:var(--font-body); }
+
+  #admin-content{
+    background: var(--parchment-light);
+    border:1px solid var(--parchment-dark);
+    box-shadow: 0 1px 0 rgba(255,255,255,.15) inset, 0 10px 22px var(--shadow);
+    padding:20px 22px;
+    color: var(--ink);
+    min-height:60px;
+  }
+  #admin-content:empty{ display:none; }
+
+  .admin-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin:20px 0 16px; }
+  .admin-tab-btn{
+    font-family: var(--font-head); font-size:.78rem; letter-spacing:.04em; text-transform:uppercase;
+    padding:9px 14px; border:1px solid var(--parchment-dark); background:transparent; color:var(--parchment-light);
+    cursor:pointer;
+  }
+  .admin-tab-btn.active{ background: var(--gold); color: var(--leather-dark); border-color:var(--ink); }
+
+  .admin-status{ font-size:.88rem; margin-top:10px; padding:8px 10px; border-left:3px solid var(--gold); display:none; }
+  .admin-status.show{ display:block; }
+  .admin-status.success{ border-color:#3e6b3e; color:#c9e6c9; }
+  .admin-status.error{ border-color:#7a2418; color:#f0c9c2; }
+  .admin-status.info{ border-color:var(--gold-bright); color:var(--parchment-light); }
+
+  .admin-toast{
+    position:fixed; right:18px; bottom:18px; max-width:340px;
+    background: var(--leather-dark); border:1px solid var(--gold); color:var(--parchment-light);
+    padding:12px 16px; box-shadow:0 10px 24px rgba(0,0,0,.6); font-size:.9rem; z-index:50;
+  }
+  .admin-toast.error{ border-color:#7a2418; }
+
+  .admin-warn{
+    font-size:.85rem; background: rgba(122,36,24,.15); border:1px solid #7a2418;
+    padding:10px 12px; color: var(--parchment-light); margin-top:10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="admin-shell">
+  <header class="admin-head">
+    <span class="eyebrow">Служебная страница</span>
+    <h1>Админка «Кодекс Чёрного Прилива»</h1>
+    <p>Здесь можно добавлять и редактировать локации, персонажей, корабли, историю и заметки — без правки кода. Изменения сохраняются напрямую в GitHub-репозиторий и появятся на сайте через 1–3 минуты после сохранения (столько занимает пересборка GitHub Pages).</p>
+    <p class="admin-warn">Личный токен доступа (Personal Access Token) хранится только в вашем браузере (localStorage) и никуда, кроме api.github.com, не отправляется. Никому его не показывайте и не вставляйте на других сайтах.</p>
+  </header>
+
+  <section class="admin-card" id="setup-panel">
+    <h2>Подключение к репозиторию</h2>
+    <form id="connect-form">
+      <div class="admin-grid2">
+        <label class="admin-field">
+          <span>Владелец репозитория (username или организация)</span>
+          <input type="text" id="cfg-owner" placeholder="например, mynickname">
+        </label>
+        <label class="admin-field">
+          <span>Название репозитория</span>
+          <input type="text" id="cfg-repo" placeholder="например, black-tide-codex">
+        </label>
+        <label class="admin-field">
+          <span>Ветка</span>
+          <input type="text" id="cfg-branch" placeholder="main" value="main">
+        </label>
+        <label class="admin-field">
+          <span>Personal Access Token</span>
+          <input type="password" id="cfg-token" placeholder="ghp_… или github_pat_…">
+          <small>Fine-grained token → выбрать этот репозиторий → права Contents: Read and write.</small>
+        </label>
+      </div>
+      <div class="admin-form-actions">
+        <button type="submit" class="btn">Подключиться</button>
+        <button type="button" class="btn btn-ghost" id="disconnect-btn">Выйти / забыть токен</button>
+      </div>
+      <div class="admin-status" id="connect-status"></div>
+    </form>
+  </section>
+
+  <nav class="admin-tabs" id="admin-tabs" hidden></nav>
+  <section id="admin-content"></section>
+</div>
+
+<div id="toast" class="admin-toast" hidden></div>
+
+<script>
+/* =========================================================================
+   АДМИНКА — читает и пишет файлы data/*.js напрямую через GitHub API.
+   Логику сайта (engine.js, style.css) эта страница не трогает.
+   ========================================================================= */
+
+// Разрешаем переопределить адрес API через ?apiBase=... — используется
+// только для локального тестирования, обычным пользователям не нужно.
+const API_BASE = new URLSearchParams(location.search).get("apiBase") || "https://api.github.com";
+const CONFIG_KEY = "codexAdminConfig_v1";
+
+function escapeHtml(str){
+  return String(str ?? "").replace(/[&<>"']/g, s => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[s]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+function b64EncodeUnicode(str){
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))));
+}
+function b64DecodeUnicode(str){
+  return decodeURIComponent(atob(str).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+}
+
+const TRANSLIT = {а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"ts",ч:"ch",ш:"sh",щ:"sch",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya"};
+function slugify(str, prefix){
+  const t = String(str || "").toLowerCase().split("").map(ch => TRANSLIT[ch] ?? ch).join("");
+  const s = t.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return prefix ? `${prefix}-${s}` : s;
+}
+
+// ---------- конфиг / localStorage ----------
+function getConfig(){
+  try{ return JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}"); }
+  catch(e){ return {}; }
+}
+function setConfig(cfg){ localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
+function clearConfig(){ localStorage.removeItem(CONFIG_KEY); }
+
+function authHeaders(){
+  const { token } = getConfig();
+  return { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" };
+}
+
+// ---------- GitHub API ----------
+async function ghGetFile(path){
+  const { owner, repo, branch } = getConfig();
+  const url = `${API_BASE}/repos/${owner}/${repo}/contents/${encodeURI(path)}?ref=${encodeURIComponent(branch)}`;
+  const res = await fetch(url, { headers: authHeaders() });
+  if(!res.ok){
+    if(res.status === 404) throw new Error(`Файл ${path} не найден в ${owner}/${repo} (ветка ${branch}).`);
+    if(res.status === 401 || res.status === 403) throw new Error("Токен недействителен или не хватает прав доступа.");
+    throw new Error(`Ошибка загрузки ${path}: HTTP ${res.status}`);
+  }
+  const json = await res.json();
+  const raw = (json.content || "").replace(/\n/g, "");
+  return { content: b64DecodeUnicode(raw), sha: json.sha };
+}
+
+async function ghPutFile(path, content, sha, message){
+  const { owner, repo, branch } = getConfig();
+  const url = `${API_BASE}/repos/${owner}/${repo}/contents/${encodeURI(path)}`;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ message, branch, sha, content: b64EncodeUnicode(content) })
+  });
+  if(!res.ok){
+    let msg = `HTTP ${res.status}`;
+    try{ const j = await res.json(); if(j.message) msg = j.message; }catch(e){}
+    if(res.status === 409) throw new Error("Файл изменился в репозитории с момента загрузки. Нажмите «Обновить из GitHub» и повторите правку.");
+    throw new Error(`Не удалось сохранить ${path}: ${msg}`);
+  }
+  return res.json();
+}
+
+// ---------- описание файлов данных ----------
+const HEADER_NOTE = "\n   Этот файл можно редактировать и через панель admin.html — она\n   перезаписывает файл целиком (кавычки у ключей могут поменяться,\n   на работу сайта это не влияет), и вручную, как обычно.";
+
+const SCHEMAS = {
+  locations: {
+    file: "data/locations.js", dataKey: "locations", title: "Локации", kind: "array", idPrefix: "loc",
+    header: `/* =========================================================================
+   ЛОКАЦИИ
+   =========================================================================
+   id            — уникальный код локации, латиницей, без пробелов
+   name          — название на странице
+   type          — короткая подпись типа места
+   image         — путь/ссылка на картинку, или "" для авто-заглушки
+   short         — короткое описание (видно в карточке-превью)
+   history       — полный текст истории места. Абзацы разделяйте ПУСТОЙ СТРОКОЙ
+   characterIds  — список id персонажей (data/characters.js)
+   mapX, mapY    — положение метки на карте, в ПРОЦЕНТАХ (0-100)${HEADER_NOTE}
+   ========================================================================= */
+`,
+    fields: [
+      { key:"id", label:"ID", type:"id", hint:"латиницей, без пробелов, уникальный" },
+      { key:"name", label:"Название", type:"text" },
+      { key:"type", label:"Тип места", type:"text" },
+      { key:"image", label:"Картинка (ссылка)", type:"text", placeholder:"пусто — авто-заглушка" },
+      { key:"short", label:"Короткое описание", type:"textarea" },
+      { key:"history", label:"Полная история", type:"paragraphs", hint:"пустая строка — новый абзац" },
+      { key:"characterIds", label:"ID персонажей", type:"tags", hint:"через запятую, см. вкладку «Персонажи»" },
+      { key:"mapX", label:"X на карте (0–100)", type:"number" },
+      { key:"mapY", label:"Y на карте (0–100)", type:"number" }
+    ]
+  },
+  characters: {
+    file: "data/characters.js", dataKey: "characters", title: "Персонажи", kind: "array", idPrefix: "char",
+    header: `/* =========================================================================
+   ПЕРСОНАЖИ
+   =========================================================================
+   id            — уникальный код персонажа, латиницей, без пробелов
+   name          — имя на странице
+   role          — роль/должность
+   status        — один из: "alive" | "dead" | "unknown"
+   statusLabel   — подпись статуса, которая видна пользователю ("Жив" и т.п.)
+   faction       — фракция/принадлежность
+   locationId    — id локации из data/locations.js, или null
+   shipId        — id корабля из data/ships.js, или null
+   tags          — список коротких меток-чипов
+   image         — путь/ссылка на портрет, или "" для авто-заглушки
+   references    — список { src, caption } для референсов дизайна
+   arts          — список { src, caption } для готовых артов
+   shortBio      — короткая биография (видна в карточке-превью и списке)
+   biography     — полная биография. Абзацы разделяйте ПУСТОЙ СТРОКОЙ
+   historyNotes  — предыстория/бэкграунд, тем же образом абзацами${HEADER_NOTE}
+   ========================================================================= */
+`,
+    fields: [
+      { key:"id", label:"ID", type:"id", hint:"латиницей, без пробелов, уникальный" },
+      { key:"name", label:"Имя", type:"text" },
+      { key:"role", label:"Роль/должность", type:"text" },
+      { key:"status", label:"Статус", type:"select", options:[
+          {value:"alive", label:"Жив(а)"}, {value:"dead", label:"Погиб(ла)"}, {value:"unknown", label:"Неизвестно"}
+        ] },
+      { key:"statusLabel", label:"Подпись статуса", type:"text", placeholder:"например, «Жива»" },
+      { key:"faction", label:"Фракция", type:"text" },
+      { key:"locationId", label:"Локация", type:"select-dynamic", source:"locations" },
+      { key:"shipId", label:"Корабль", type:"select-dynamic", source:"ships" },
+      { key:"tags", label:"Метки-чипы", type:"tags", hint:"через запятую" },
+      { key:"image", label:"Портрет (ссылка)", type:"text", placeholder:"пусто — авто-заглушка" },
+      { key:"references", label:"Референсы", type:"pairs" },
+      { key:"arts", label:"Арты", type:"pairs" },
+      { key:"shortBio", label:"Короткая биография", type:"textarea" },
+      { key:"biography", label:"Полная биография", type:"paragraphs", hint:"пустая строка — новый абзац" },
+      { key:"historyNotes", label:"Предыстория", type:"paragraphs", hint:"пустая строка — новый абзац" }
+    ]
+  },
+  ships: {
+    file: "data/ships.js", dataKey: "ships", title: "Корабли", kind: "array", idPrefix: "ship",
+    header: `/* =========================================================================
+   КОРАБЛИ
+   =========================================================================
+   id            — уникальный код корабля, латиницей, без пробелов
+   name          — название на странице
+   type          — короткая подпись (класс судна, число орудий и т.п.)
+   image         — путь/ссылка на картинку, или "" для авто-заглушки
+   short         — короткое описание (видно в карточке-превью)
+   history       — полный текст истории корабля. Абзацы — ПУСТОЙ СТРОКОЙ
+   characterIds  — список id персонажей из экипажа${HEADER_NOTE}
+   ========================================================================= */
+`,
+    fields: [
+      { key:"id", label:"ID", type:"id", hint:"латиницей, без пробелов, уникальный" },
+      { key:"name", label:"Название", type:"text" },
+      { key:"type", label:"Тип/класс", type:"text" },
+      { key:"image", label:"Картинка (ссылка)", type:"text", placeholder:"пусто — авто-заглушка" },
+      { key:"short", label:"Короткое описание", type:"textarea" },
+      { key:"history", label:"Полная история", type:"paragraphs", hint:"пустая строка — новый абзац" },
+      { key:"characterIds", label:"Экипаж (ID персонажей)", type:"tags", hint:"через запятую" }
+    ]
+  },
+  historyTimeline: {
+    file: "data/history.js", dataKey: "historyTimeline", title: "История", kind: "array",
+    header: `/* =========================================================================
+   ИСТОРИЯ МИРА (ХРОНОЛОГИЯ)
+   =========================================================================
+   Записи выводятся в том порядке, в котором идут в этом списке —
+   двигайте их стрелками вверх/вниз в админке.
+   date   — подпись даты/времени (текст, не обязательно точная дата)
+   title  — заголовок события
+   text   — краткое описание события${HEADER_NOTE}
+   ========================================================================= */
+`,
+    fields: [
+      { key:"date", label:"Дата/период", type:"text", placeholder:"например, «6 лет назад»" },
+      { key:"title", label:"Заголовок события", type:"text" },
+      { key:"text", label:"Описание", type:"textarea" }
+    ]
+  },
+  notes: {
+    file: "data/notes.js", dataKey: "notes", title: "Заметки", kind: "array",
+    header: `/* =========================================================================
+   ЗАМЕТКИ
+   =========================================================================
+   title  — заголовок заметки
+   tags   — список коротких меток-чипов (по ним работает фильтр на странице)
+   text   — текст заметки${HEADER_NOTE}
+   ========================================================================= */
+`,
+    fields: [
+      { key:"title", label:"Заголовок", type:"text" },
+      { key:"tags", label:"Метки", type:"tags", hint:"через запятую" },
+      { key:"text", label:"Текст заметки", type:"textarea" }
+    ]
+  },
+  siteInfo: {
+    file: "data/site-info.js", title: "Общая информация", kind: "object",
+    header: `/* =========================================================================
+   ОБЩАЯ ИНФОРМАЦИЯ О САЙТЕ${HEADER_NOTE}
+   ========================================================================= */
+`,
+    fields: [
+      { key:"siteTitle", label:"Название сайта", type:"text" },
+      { key:"siteTagline", label:"Подпись/тэглайн", type:"text" },
+      { key:"mapImage", label:"Картинка карты (путь или ссылка)", type:"text" },
+      { key:"aboutInfo", label:"Текст на главной («Общие сведения»)", type:"paragraphs", hint:"пустая строка — новый абзац" }
+    ]
+  }
+};
+const TAB_ORDER = ["locations","characters","ships","historyTimeline","notes","siteInfo"];
+
+let cache = {};       // { [schemaKey]: { data, sha } }
+let currentTab = null;
+
+// ---------- загрузка файлов ----------
+async function loadFile(key){
+  const schema = SCHEMAS[key];
+  const { content, sha } = await ghGetFile(schema.file);
+  const fakeWindow = {};
+  try{ new Function("window", content)(fakeWindow); }
+  catch(e){ throw new Error(`Не удалось разобрать ${schema.file}: ${e.message}`); }
+  const siteData = fakeWindow.SITE_DATA || {};
+  let data;
+  if(schema.kind === "object"){
+    data = {};
+    schema.fields.forEach(f => data[f.key] = siteData[f.key] ?? "");
+  } else {
+    data = Array.isArray(siteData[schema.dataKey]) ? siteData[schema.dataKey] : [];
+  }
+  cache[key] = { data, sha };
+}
+
+async function preloadAll(){
+  const errors = [];
+  for(const key of TAB_ORDER){
+    try{ await loadFile(key); }
+    catch(e){ errors.push(e.message); }
+  }
+  if(errors.length) showToast(errors.join(" "), true);
+}
+
+// ---------- сериализация обратно в файл ----------
+function buildFileText(key){
+  const schema = SCHEMAS[key];
+  const body = "window.SITE_DATA = window.SITE_DATA || {};\n\n";
+  if(schema.kind === "object"){
+    const data = cache[key].data;
+    const lines = schema.fields.map(f => `window.SITE_DATA.${f.key} = ${JSON.stringify(data[f.key] ?? "")};`);
+    return schema.header + body + lines.join("\n\n") + "\n";
+  }
+  const arr = cache[key].data;
+  return schema.header + body + `window.SITE_DATA.${schema.dataKey} = ${JSON.stringify(arr, null, 2)};\n`;
+}
+
+async function commitFile(key, message){
+  const schema = SCHEMAS[key];
+  const text = buildFileText(key);
+  const result = await ghPutFile(schema.file, text, cache[key].sha, message || `Обновление ${schema.file} через admin.html`);
+  cache[key].sha = result.content.sha;
+}
+
+// ---------- UI: статус / тосты ----------
+const statusEl = document.getElementById("connect-status");
+function showStatus(msg, kind){
+  statusEl.textContent = msg;
+  statusEl.className = `admin-status show ${kind || ""}`;
+}
+const toastEl = document.getElementById("toast");
+let toastTimer = null;
+function showToast(msg, isError){
+  toastEl.textContent = msg;
+  toastEl.className = "admin-toast" + (isError ? " error" : "");
+  toastEl.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, 5000);
+}
+
+// ---------- поля форм ----------
+function renderField(field, value){
+  const id = `f_${field.key}`;
+  switch(field.type){
+    case "text":
+      return `<label class="admin-field"><span>${field.label}</span><input type="text" id="${id}" name="${field.key}" value="${escapeAttr(value ?? "")}" placeholder="${escapeAttr(field.placeholder || "")}"></label>`;
+    case "number":
+      return `<label class="admin-field"><span>${field.label}</span><input type="number" step="any" id="${id}" name="${field.key}" value="${value ?? ""}"></label>`;
+    case "textarea":
+      return `<label class="admin-field"><span>${field.label}</span><textarea id="${id}" name="${field.key}" rows="3">${escapeHtml(value ?? "")}</textarea></label>`;
+    case "paragraphs":
+      return `<label class="admin-field"><span>${field.label}</span>${field.hint ? `<small>${field.hint}</small>` : ""}<textarea id="${id}" name="${field.key}" rows="7" class="mono">${escapeHtml(value ?? "")}</textarea></label>`;
+    case "tags":
+      return `<label class="admin-field"><span>${field.label}</span>${field.hint ? `<small>${field.hint}</small>` : ""}<input type="text" id="${id}" name="${field.key}" value="${escapeAttr((value || []).join(", "))}"></label>`;
+    case "select":
+      return `<label class="admin-field"><span>${field.label}</span><select id="${id}" name="${field.key}">${field.options.map(o => `<option value="${o.value}" ${o.value === value ? "selected" : ""}>${o.label}</option>`).join("")}</select></label>`;
+    case "select-dynamic": {
+      const list = (cache[field.source] && cache[field.source].data) || [];
+      const opts = [`<option value="">— не указано —</option>`].concat(
+        list.map(it => `<option value="${escapeAttr(it.id)}" ${it.id === value ? "selected" : ""}>${escapeHtml(it.name)} (${escapeHtml(it.id)})</option>`)
+      ).join("");
+      return `<label class="admin-field"><span>${field.label}</span><select id="${id}" name="${field.key}">${opts}</select></label>`;
+    }
+    case "id":
+      return `<label class="admin-field"><span>${field.label}</span>${field.hint ? `<small>${field.hint}</small>` : ""}
+        <div class="admin-id-row">
+          <input type="text" id="${id}" name="${field.key}" value="${escapeAttr(value ?? "")}">
+          <button type="button" class="btn btn-ghost btn-sm" id="suggest-id-btn">Предложить</button>
+        </div>
+      </label>`;
+    case "pairs":
+      return renderPairsField(field, value || []);
+    default:
+      return "";
+  }
+}
+function pairRowHtml(item){
+  item = item || { src:"", caption:"" };
+  return `<div class="admin-pair-row">
+    <input type="text" placeholder="Ссылка (src)" data-pair-field="src" value="${escapeAttr(item.src || "")}">
+    <input type="text" placeholder="Подпись" data-pair-field="caption" value="${escapeAttr(item.caption || "")}">
+    <button type="button" class="btn btn-ghost btn-sm danger" data-remove-pair>×</button>
+  </div>`;
+}
+function renderPairsField(field, items){
+  return `<div class="admin-field admin-pairs" data-pairs-for="${field.key}">
+    <span>${field.label}</span>
+    <div class="admin-pairs-rows">${items.map(pairRowHtml).join("")}</div>
+    <button type="button" class="btn btn-ghost btn-sm" data-add-pair="${field.key}">+ добавить</button>
+  </div>`;
+}
+
+function collectFormData(schema, formEl){
+  const out = {};
+  schema.fields.forEach(field => {
+    if(field.type === "pairs"){
+      const rows = formEl.querySelectorAll(`.admin-pairs[data-pairs-for="${field.key}"] .admin-pair-row`);
+      out[field.key] = Array.from(rows).map(row => ({
+        src: row.querySelector('[data-pair-field="src"]').value.trim(),
+        caption: row.querySelector('[data-pair-field="caption"]').value.trim()
+      })).filter(p => p.src || p.caption);
+      return;
+    }
+    const el = formEl.querySelector(`[name="${field.key}"]`);
+    if(!el) return;
+    if(field.type === "tags") out[field.key] = el.value.split(",").map(s => s.trim()).filter(Boolean);
+    else if(field.type === "number") out[field.key] = el.value === "" ? null : Number(el.value);
+    else if(field.type === "select-dynamic" || field.type === "select") out[field.key] = el.value || null;
+    else out[field.key] = el.value;
+  });
+  return out;
+}
+
+// ---------- рендер вкладок / списков / форм ----------
+const tabsEl = document.getElementById("admin-tabs");
+const contentEl = document.getElementById("admin-content");
+
+function renderTabs(){
+  tabsEl.innerHTML = TAB_ORDER.map(key =>
+    `<button type="button" class="admin-tab-btn" data-tab="${key}">${SCHEMAS[key].title}</button>`
+  ).join("");
+  tabsEl.querySelectorAll(".admin-tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => selectTab(btn.dataset.tab));
+  });
+}
+
+function selectTab(key){
+  currentTab = key;
+  tabsEl.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === key));
+  const schema = SCHEMAS[key];
+  if(schema.kind === "object") renderObjectForm(key);
+  else renderList(key);
+}
+
+function itemTitle(item){ return item.name || item.title || item.id || "(без названия)"; }
+
+function renderList(key){
+  const schema = SCHEMAS[key];
+  const data = cache[key].data;
+  const rows = data.map((item, idx) => `
+    <div class="admin-row" data-idx="${idx}">
+      <div class="admin-row-main">
+        <strong>${escapeHtml(itemTitle(item))}</strong>
+        ${item.type ? `<span class="admin-row-sub">${escapeHtml(item.type)}</span>` : ""}
+      </div>
+      <div class="admin-row-actions">
+        <button type="button" class="btn btn-ghost btn-sm" data-action="up" title="Выше">↑</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-action="down" title="Ниже">↓</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-action="edit">Править</button>
+        <button type="button" class="btn btn-ghost btn-sm danger" data-action="delete">Удалить</button>
+      </div>
+    </div>`).join("") || `<p class="admin-empty">Пока пусто.</p>`;
+
+  contentEl.innerHTML = `
+    <div class="admin-toolbar">
+      <button type="button" class="btn" id="add-new-btn">+ Добавить</button>
+      <button type="button" class="btn btn-ghost" id="reload-btn">Обновить из GitHub</button>
+    </div>
+    <div class="admin-list">${rows}</div>`;
+
+  document.getElementById("add-new-btn").addEventListener("click", () => renderForm(key, null));
+  document.getElementById("reload-btn").addEventListener("click", async () => {
+    showToast("Обновляем…");
+    try{ await loadFile(key); renderList(key); showToast("Обновлено."); }
+    catch(e){ showToast(e.message, true); }
+  });
+
+  contentEl.querySelectorAll(".admin-row").forEach(row => {
+    const idx = Number(row.dataset.idx);
+    row.querySelector('[data-action="edit"]').addEventListener("click", () => renderForm(key, idx));
+    row.querySelector('[data-action="delete"]').addEventListener("click", async () => {
+      if(!confirm(`Удалить «${itemTitle(data[idx])}»? Это сразу сохранится в репозиторий.`)) return;
+      data.splice(idx, 1);
+      try{ await commitFile(key, `Удаление записи в ${schema.file}`); showToast("Удалено."); renderList(key); }
+      catch(e){ showToast(e.message, true); }
+    });
+    row.querySelector('[data-action="up"]').addEventListener("click", async () => {
+      if(idx === 0) return;
+      [data[idx-1], data[idx]] = [data[idx], data[idx-1]];
+      try{ await commitFile(key, `Изменение порядка в ${schema.file}`); renderList(key); }
+      catch(e){ showToast(e.message, true); }
+    });
+    row.querySelector('[data-action="down"]').addEventListener("click", async () => {
+      if(idx === data.length - 1) return;
+      [data[idx+1], data[idx]] = [data[idx], data[idx+1]];
+      try{ await commitFile(key, `Изменение порядка в ${schema.file}`); renderList(key); }
+      catch(e){ showToast(e.message, true); }
+    });
+  });
+}
+
+function renderForm(key, index){
+  const schema = SCHEMAS[key];
+  const data = cache[key].data;
+  const isNew = index === null;
+  const item = isNew ? {} : data[index];
+  const fieldsHtml = schema.fields.map(f => renderField(f, item[f.key])).join("");
+
+  contentEl.innerHTML = `
+    <form id="item-form" class="admin-form">
+      <h3>${isNew ? "Новая запись" : "Редактирование записи"}</h3>
+      ${fieldsHtml}
+      <div class="admin-form-actions">
+        <button type="submit" class="btn">Сохранить</button>
+        <button type="button" class="btn btn-ghost" id="cancel-edit-btn">Отмена</button>
+      </div>
+    </form>`;
+
+  const form = document.getElementById("item-form");
+
+  form.querySelectorAll("[data-add-pair]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const wrap = form.querySelector(`.admin-pairs[data-pairs-for="${btn.dataset.addPair}"] .admin-pairs-rows`);
+      wrap.insertAdjacentHTML("beforeend", pairRowHtml());
+      wrap.lastElementChild.querySelector("[data-remove-pair]").addEventListener("click", e => e.target.closest(".admin-pair-row").remove());
+    });
+  });
+  form.querySelectorAll("[data-remove-pair]").forEach(btn => {
+    btn.addEventListener("click", () => btn.closest(".admin-pair-row").remove());
+  });
+
+  const suggestBtn = document.getElementById("suggest-id-btn");
+  if(suggestBtn){
+    suggestBtn.addEventListener("click", () => {
+      const nameField = form.querySelector('[name="name"]') || form.querySelector('[name="title"]');
+      const idInput = form.querySelector('[name="id"]');
+      if(nameField && idInput) idInput.value = slugify(nameField.value, schema.idPrefix);
+    });
+  }
+
+  document.getElementById("cancel-edit-btn").addEventListener("click", () => renderList(key));
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const newItem = collectFormData(schema, form);
+    if(schema.fields.some(f => f.key === "id")){
+      if(!newItem.id){ showToast("Заполните ID.", true); return; }
+      const dup = data.some((it, i) => it.id === newItem.id && i !== index);
+      if(dup){ showToast("Такой ID уже используется — выберите другой.", true); return; }
+    }
+    if(isNew) data.push(newItem); else data[index] = newItem;
+    try{
+      await commitFile(key, `${isNew ? "Добавление" : "Редактирование"} записи в ${schema.file}`);
+      showToast("Сохранено. Сайт обновится за 1–3 минуты.");
+      renderList(key);
+    }catch(err){
+      showToast(err.message, true);
+    }
+  });
+}
+
+function renderObjectForm(key){
+  const schema = SCHEMAS[key];
+  const data = cache[key].data;
+  const fieldsHtml = schema.fields.map(f => renderField(f, data[f.key])).join("");
+  contentEl.innerHTML = `
+    <form id="item-form" class="admin-form">
+      <h3>${schema.title}</h3>
+      ${fieldsHtml}
+      <div class="admin-form-actions">
+        <button type="submit" class="btn">Сохранить</button>
+        <button type="button" class="btn btn-ghost" id="reload-btn">Обновить из GitHub</button>
+      </div>
+    </form>`;
+  document.getElementById("reload-btn").addEventListener("click", async () => {
+    try{ await loadFile(key); renderObjectForm(key); showToast("Обновлено."); }
+    catch(e){ showToast(e.message, true); }
+  });
+  document.getElementById("item-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    cache[key].data = collectFormData(schema, e.target);
+    try{ await commitFile(key); showToast("Сохранено. Сайт обновится за 1–3 минуты."); }
+    catch(err){ showToast(err.message, true); }
+  });
+}
+
+// ---------- подключение ----------
+document.getElementById("connect-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const owner = document.getElementById("cfg-owner").value.trim();
+  const repo = document.getElementById("cfg-repo").value.trim();
+  const branch = document.getElementById("cfg-branch").value.trim() || "main";
+  const token = document.getElementById("cfg-token").value.trim();
+  if(!owner || !repo || !token){ showStatus("Заполните владельца, репозиторий и токен.", "error"); return; }
+  setConfig({ owner, repo, branch, token });
+  showStatus("Проверяем доступ…", "info");
+  try{
+    const res = await fetch(`${API_BASE}/repos/${owner}/${repo}`, { headers: authHeaders() });
+    if(!res.ok){
+      if(res.status === 404) throw new Error("Репозиторий не найден или нет доступа.");
+      if(res.status === 401 || res.status === 403) throw new Error("Токен недействителен, просрочен или не даёт доступа к этому репозиторию.");
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const info = await res.json();
+    const canPush = info.permissions && info.permissions.push;
+    cache = {};
+    await preloadAll();
+    renderTabs();
+    tabsEl.hidden = false;
+    selectTab(currentTab || TAB_ORDER[0]);
+    if(canPush) showStatus("Подключено. Можно редактировать.", "success");
+    else showStatus("Подключились, но у токена нет прав на запись. Попросите владельца добавить вас как Collaborator (Write), либо проверьте права токена.", "error");
+  }catch(err){
+    showStatus("Ошибка подключения: " + err.message, "error");
+  }
+});
+
+document.getElementById("disconnect-btn").addEventListener("click", () => {
+  clearConfig();
+  cache = {};
+  tabsEl.hidden = true;
+  tabsEl.innerHTML = "";
+  contentEl.innerHTML = "";
+  document.getElementById("cfg-token").value = "";
+  showStatus("Токен забыт. Данные для входа удалены из этого браузера.", "info");
+});
+
+// ---------- автозаполнение при открытии, если конфиг уже сохранён ----------
+(function init(){
+  const cfg = getConfig();
+  if(cfg.owner) document.getElementById("cfg-owner").value = cfg.owner;
+  if(cfg.repo) document.getElementById("cfg-repo").value = cfg.repo;
+  if(cfg.branch) document.getElementById("cfg-branch").value = cfg.branch;
+  if(cfg.token) document.getElementById("cfg-token").value = cfg.token;
+  if(cfg.owner && cfg.repo && cfg.token){
+    document.getElementById("connect-form").requestSubmit();
+  }
+})();
+</script>
+</body>
+</html>

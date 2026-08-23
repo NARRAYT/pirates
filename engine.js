@@ -65,6 +65,11 @@ function charactersFor(ids){
   return (ids||[]).map(findCharacter).filter(Boolean);
 }
 
+function sealHTML(status, label){
+  const st = status === "alive" ? "alive" : status === "dead" ? "dead" : "unknown";
+  return `<span class="seal" data-status="${st}"><span class="dot" aria-hidden="true"></span>${escapeHTML(label)}</span>`;
+}
+
 function rosterHTML(chars){
   if(!chars.length) return `<p class="empty">Пока никто не привязан к этой записи.</p>`;
   return `<div class="roster">${chars.map(c => `
@@ -185,7 +190,7 @@ function renderMap(){
                 <span class="card-type">${escapeHTML(loc.type)}</span>
                 <h3>${escapeHTML(loc.name)}</h3>
                 <p class="card-desc">${escapeHTML(loc.short)}</p>
-                <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье</a>
+                <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
               </div>
             </div>
           </div>
@@ -320,7 +325,7 @@ function renderShipDetail(id){
 }
 
 // ---- персонажи: фильтр + поиск ----
-let charFilterState = { q: "", role: "all", faction: "all", tag: "all" };
+let charFilterState = { q: "", role: "all", faction: "all", status: "all", tag: "all" };
 
 function uniqueValues(arr, key){
   return [...new Set(arr.map(x => x[key]).filter(Boolean))].sort();
@@ -349,6 +354,12 @@ function renderCharactersList(){
         <option value="all">Все фракции</option>
         ${factions.map(f => `<option value="${escapeHTML(f)}" ${charFilterState.faction===f?'selected':''}>${escapeHTML(f)}</option>`).join("")}
       </select>
+      <select id="filter-status" aria-label="Фильтр по статусу">
+        <option value="all">Любой статус</option>
+        <option value="alive" ${charFilterState.status==='alive'?'selected':''}>Жив</option>
+        <option value="dead" ${charFilterState.status==='dead'?'selected':''}>Погиб</option>
+        <option value="unknown" ${charFilterState.status==='unknown'?'selected':''}>Неизвестно</option>
+      </select>
       <select id="filter-tag" aria-label="Фильтр по метке">
         <option value="all">Все метки</option>
         ${tags.map(t => `<option value="${escapeHTML(t)}" ${charFilterState.tag===t?'selected':''}>${escapeHTML(t)}</option>`).join("")}
@@ -367,6 +378,7 @@ function filterCharacters(){
     if(q && !c.name.toLowerCase().includes(q)) return false;
     if(charFilterState.role !== "all" && c.role !== charFilterState.role) return false;
     if(charFilterState.faction !== "all" && c.faction !== charFilterState.faction) return false;
+    if(charFilterState.status !== "all" && c.status !== charFilterState.status) return false;
     if(charFilterState.tag !== "all" && !(c.tags||[]).includes(charFilterState.tag)) return false;
     return true;
   });
@@ -378,6 +390,7 @@ function renderCharacterCard(c){
       ${imgTag(c.image, c.id, c.name, "thumb")}
       <span class="card-type">${escapeHTML(c.role)}</span>
       <h3>${escapeHTML(c.name)}</h3>
+      ${sealHTML(c.status, c.statusLabel)}
       <p class="card-desc">${escapeHTML(c.shortBio)}</p>
       <div class="card-tags">${(c.tags||[]).slice(0,3).map(t=>`<span class="chip">${escapeHTML(t)}</span>`).join("")}</div>
     </a>`;
@@ -401,11 +414,14 @@ function attachCharacterFilterHandlers(){
   document.getElementById("filter-faction").addEventListener("change", e => {
     charFilterState.faction = e.target.value; updateCharGrid();
   });
+  document.getElementById("filter-status").addEventListener("change", e => {
+    charFilterState.status = e.target.value; updateCharGrid();
+  });
   document.getElementById("filter-tag").addEventListener("change", e => {
     charFilterState.tag = e.target.value; updateCharGrid();
   });
   document.getElementById("filter-reset").addEventListener("click", () => {
-    charFilterState = { q:"", role:"all", faction:"all", tag:"all" };
+    charFilterState = { q:"", role:"all", faction:"all", status:"all", tag:"all" };
     document.getElementById("app").innerHTML = renderCharactersList();
     attachCharacterFilterHandlers();
   });
@@ -429,6 +445,7 @@ function renderCharacterDetail(id){
       <div class="detail-facts">
         <span class="card-type">${escapeHTML(c.role)}</span>
         <h1>${escapeHTML(c.name)}</h1>
+        ${sealHTML(c.status, c.statusLabel)}
         <table class="facts-table">
           <tr><td class="k">Фракция</td><td>${escapeHTML(c.faction)}</td></tr>
           <tr><td class="k">Локация</td><td>${loc ? `<a href="#location/${loc.id}">${escapeHTML(loc.name)}</a>` : "&mdash;"}</td></tr>
