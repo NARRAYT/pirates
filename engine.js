@@ -847,13 +847,25 @@ function scrollToRatio(ratio, smooth){
   window.scrollTo({ top: Math.max(0, targetY), behavior: smooth ? "smooth" : "auto" });
 }
 
-function updateRibbonUI(){
+// instant=true — ленточка сразу встаёт на нужную высоту без анимации
+// (загрузка страницы, переход в раздел, смена главы). Без этого флага
+// (клик по полю, чтобы отметить место) высота меняется плавно, "лента
+// поднимается до курсора", а не перескакивает к отметке рывком.
+function updateRibbonUI(instant){
   const ribbon = document.getElementById("book-ribbon");
   if(!ribbon) return;
   const bm = loadBookmark();
   const onThisChapter = bm && bm.chapterIdx === bookChapterIdx;
   ribbon.hidden = !onThisChapter;
-  if(onThisChapter) ribbon.style.height = (bm.ratio * 100) + "%";
+  if(!onThisChapter) return;
+  if(instant){
+    ribbon.classList.add("book-ribbon--instant");
+    ribbon.style.height = (bm.ratio * 100) + "%";
+    void ribbon.offsetHeight; // применяем без анимации
+    ribbon.classList.remove("book-ribbon--instant");
+  }else{
+    ribbon.style.height = (bm.ratio * 100) + "%";
+  }
 }
 
 // ---- разметка раздела ----
@@ -905,13 +917,13 @@ function renderBookPageDOM(){
   if(!chapters.length){
     pageEl.innerHTML = `<p class="empty">Глав пока нет — добавьте их в админке, в разделе «Книга».</p>`;
     updateBookControls();
-    updateRibbonUI();
+    updateRibbonUI(true);
     return;
   }
   bookChapterIdx = Math.max(0, Math.min(bookChapterIdx, chapters.length - 1));
   pageEl.innerHTML = buildChapterHTML(chapters[bookChapterIdx]);
   updateBookControls();
-  updateRibbonUI();
+  updateRibbonUI(true);
   saveLastChapter(bookChapterIdx);
 }
 
@@ -980,7 +992,7 @@ function onBookMarginClick(e){
   const rect = margin.getBoundingClientRect();
   const ratio = (e.clientY - rect.top) / rect.height;
   saveBookmark(bookChapterIdx, ratio);
-  updateRibbonUI();
+  updateRibbonUI(false);
   const ribbon = document.getElementById("book-ribbon");
   if(ribbon){
     ribbon.classList.remove("book-ribbon--pulse");
