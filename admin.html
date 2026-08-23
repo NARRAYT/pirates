@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Админка — Кодекс Чёрного Прилива</title>
+<title>Админка || В поисках счастья</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -160,28 +160,20 @@
 </head>
 <body>
 
-<div class="admin-shell">
-  <header class="admin-head">
-    <span class="eyebrow">Служебная страница</span>
-    <h1>Админка «Кодекс Чёрного Прилива»</h1>
-    <p>Здесь можно добавлять и редактировать локации, персонажей, корабли, историю и заметки — без правки кода. Изменения сохраняются напрямую в GitHub-репозиторий и появятся на сайте через 1–3 минуты после сохранения (столько занимает пересборка GitHub Pages).</p>
-    <p class="admin-warn">Личный токен доступа (Personal Access Token) хранится только в вашем браузере (localStorage) и никуда, кроме api.github.com, не отправляется. Никому его не показывайте и не вставляйте на других сайтах.</p>
-  </header>
+<div class="admin-shell">  <header class="admin-head">    <h1>Админка</h1>    <p>Здесь можно добавлять и редактировать всю инфу. Изменения отправляются прямо на сайт, и появляются через 1–5 минут после сохранения. ПОСЛЕ КЛИКА НА СОХРАНЕНИЕ НАДО НЕМНОГО ПОДОЖДАТЬ, отправка в репозиторий занимает время.</p>  </header>
 
   <section class="admin-card" id="setup-panel">
     <h2>Подключение к репозиторию</h2>
     <form id="connect-form">
       <p class="admin-repo-error" id="repo-error-line" hidden>
-        Не удалось определить репозиторий автоматически. Откройте эту страницу по адресу вида
-        <code>https://username.github.io/repo/admin.html</code> (там, где опубликован сайт через GitHub Pages).
-      </p>
+        Не удалось определить репозиторий автоматически.</p>
       <input type="hidden" id="cfg-owner">
       <input type="hidden" id="cfg-repo">
       <div class="admin-grid2" id="repo-fields-grid">
         <label class="admin-field" style="grid-column:1/-1">
-          <span>Personal Access Token</span>
+          <span>ПАРОЛЬ</span>
           <input type="password" id="cfg-token" placeholder="ghp_… или github_pat_…">
-          <small>Fine-grained token → выбрать этот репозиторий → права Contents: Read and write.</small>
+          <small>При потере писать админу.</small>
         </label>
       </div>
       <div class="admin-form-actions">
