@@ -4,6 +4,8 @@
    id            — уникальный код персонажа, латиницей, без пробелов
    name          — имя на странице
    role          — роль/должность
+   status        — один из: "alive" | "dead" | "unknown"
+   statusLabel   — подпись статуса, которая видна пользователю ("Жив" и т.п.)
    faction       — фракция/принадлежность
    locationId    — id локации из data/locations.js, или null
    shipId        — id корабля из data/ships.js, или null
@@ -56,11 +58,13 @@ window.SITE_DATA.characters = [
     "id": "char-tomas",
     "name": "Томас Уэйнрайт",
     "role": "Капитан",
+    "status": "alive",
+    "statusLabel": "",
     "faction": "Британия",
-    "locationId": "loc-port-noire",
+    "locationId": null,
     "shipId": "ship-subbota",
     "tags": [
-      "Капитан"
+      "капитан"
     ],
     "image": "",
     "references": [],
