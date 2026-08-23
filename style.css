@@ -514,11 +514,9 @@ button{ font-family: var(--font-body); cursor:pointer; }
 
 .book-wrap{
   position:relative;
-  flex:1 1 auto;
-  min-width:0;
-  width:100%;
-  max-width:1080px;
+  flex:0 0 auto;
   margin:0 auto;
+  max-width:100%;
 }
 
 /* закладка-ярлычок, открывающая оглавление */
@@ -576,16 +574,17 @@ button{ font-family: var(--font-body); cursor:pointer; }
 .book-toc-item:hover{ color: var(--wax-red); }
 
 /* сам лист — один плоский слой, без 3D и перелистывания.
-   Ширина и текстура — как у обычной "плашки" (.content): тянется по
-   ширине контейнера, максимум 1080px. Высота при этом задана ЖЁСТКО в px
+   Формат — крупный и вытянутый по вертикали, ближе к странице манги
+   (уже и выше обычного книжного листа). Размер задан ЖЁСТКО в px
    (не в vh), поэтому разбивка текста на страницы не "плавает" при
    приближении/отдалении — меняется только на брейкпоинтах. */
 .book{
   position:relative;
-  width:100%;
-  height:640px;
+  width:640px;
+  height:960px;
+  max-width:100%;
   overflow-y:auto;
-  padding:46px 46px 50px;
+  padding:54px 50px 58px;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0), rgba(0,0,0,.10) 96%),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.16  0 0 0 0 0.11  0 0 0 0 0.06  0 0 0 0.5 0'/></filter><rect width='180' height='180' filter='url(%23p)'/></svg>"),
@@ -639,13 +638,13 @@ button{ font-family: var(--font-body); cursor:pointer; }
 }
 
 @media (max-width:780px){
-  .book{ height:520px; padding:26px 22px; font-size:1rem; }
+  .book{ width:400px; height:600px; padding:30px 26px 34px; font-size:1rem; }
   .book-chapter-title{ font-size:1.2rem; }
   .book-arrow{ width:36px; height:36px; font-size:1.25rem; }
   .book-toc-panel{ min-width:180px; }
 }
 @media (max-width:460px){
-  .book{ height:440px; padding:20px 16px; font-size:.94rem; }
+  .book{ width:300px; height:460px; padding:22px 18px 26px; font-size:.94rem; }
 }
 
 footer.site-foot{
