@@ -32,7 +32,7 @@ window.SITE_DATA.ships = [
     "id": "ship-meri",
     "name": "\"Мэри\"",
     "type": "HMS, 16 орудий",
-    "image": "",
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3lWyS-OZu-ZMW7qMd8Jfa-1puFbD2-zQm7UjEetcS0w&s=10",
     "short": "dfsfsd",
     "history": "афафа",
     "characterIds": [
