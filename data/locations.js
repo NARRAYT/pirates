@@ -48,7 +48,7 @@ window.SITE_DATA.locations = [
     "id": "loc-nassau",
     "name": "Нассау",
     "type": "обоссау",
-    "image": "",
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3lWyS-OZu-ZMW7qMd8Jfa-1puFbD2-zQm7UjEetcS0w&s=10",
     "short": "завзаыа",
     "history": "ну хз",
     "characterIds": [
