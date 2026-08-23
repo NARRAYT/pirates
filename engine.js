@@ -938,8 +938,27 @@ function currentPageMemo(){
   return { chapterIdx: p.chapterIdx, local };
 }
 
-function paginateAndRender(){
+// Запоминаем место чтения между перезагрузками страницы (localStorage),
+// чтобы читатель всегда возвращался туда, где остановился.
+const BOOK_PROGRESS_KEY = "book-progress";
+function loadBookProgress(){
+  try{
+    const raw = localStorage.getItem(BOOK_PROGRESS_KEY);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    if(obj && Number.isInteger(obj.chapterIdx) && Number.isInteger(obj.local)) return obj;
+  }catch(e){ /* localStorage недоступен — просто не восстанавливаем место */ }
+  return null;
+}
+function saveBookProgress(){
   const memo = currentPageMemo();
+  if(!memo) return;
+  try{ localStorage.setItem(BOOK_PROGRESS_KEY, JSON.stringify(memo)); }
+  catch(e){ /* не критично, если сохранить не удалось */ }
+}
+
+function paginateAndRender(){
+  const memo = currentPageMemo() || loadBookProgress();
   const computed = computeBookPages();
   if(computed === null) return;
   bookComputed = computed;
@@ -952,6 +971,7 @@ function paginateAndRender(){
     bookIndex = idx === -1 ? 0 : idx;
   }
   renderBookPageDOM();
+  saveBookProgress();
 }
 
 // ---- разметка раздела: один плоский лист, без анимации перелистывания.
@@ -960,8 +980,7 @@ function paginateAndRender(){
 function renderBook(){
   return `
   <section class="view book-view">
-    <h1>Книга</h1>
-    <p class="section-intro">Листайте стрелками или клавишами ← →.</p>
+    <h1 class="sr-only">Книга</h1>
     <div class="book-stage">
       <button type="button" class="book-arrow book-arrow-prev" id="book-prev" aria-label="Предыдущая страница">&#10094;</button>
       <div class="book-wrap">
@@ -1014,6 +1033,7 @@ function turnBookPage(dir){
   if(target < 0 || target >= bookComputed.length) return;
   bookIndex = target;
   renderBookPageDOM();
+  saveBookProgress();
 }
 
 function renderBookTOC(){
@@ -1028,7 +1048,7 @@ function renderBookTOC(){
     btn.addEventListener("click", () => {
       const idx = Number(btn.dataset.chapter);
       const target = bookComputed.findIndex(p => p.chapterIdx === idx);
-      if(target !== -1){ bookIndex = target; renderBookPageDOM(); }
+      if(target !== -1){ bookIndex = target; renderBookPageDOM(); saveBookProgress(); }
       closeBookTOC();
     });
   });
@@ -1125,6 +1145,9 @@ function render(){
   const { route, id } = parseHash();
   setActiveTab(route);
   const app = document.getElementById("app");
+  // На развороте книги убираем второй "слой" пергамента у общей рамки
+  // страницы — кнопки/ярлычок оглавления должны стоять прямо на тёмном фоне.
+  app.classList.toggle("content--book", route === "book");
 
   try{
     switch(route){
