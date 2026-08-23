@@ -20,7 +20,7 @@ window.SITE_DATA.ships = [
     "id": "ship-subbota",
     "name": "\"Суббота\"",
     "type": "HMS Unicorn, 18 орудий",
-    "image": "",
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3lWyS-OZu-ZMW7qMd8Jfa-1puFbD2-zQm7UjEetcS0w&s=10",
     "short": "ррряяу",
     "history": "рррЯ",
     "characterIds": [
