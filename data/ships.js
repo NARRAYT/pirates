@@ -22,7 +22,7 @@ window.SITE_DATA.ships = [
     "type": "HMS Unicorn, 18 орудий",
     "image": "",
     "short": "ррряяу",
-    "history": "ррр",
+    "history": "рррЯ",
     "characterIds": [
       "char-logan",
       "char-tomas"
