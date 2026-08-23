@@ -33,20 +33,6 @@ function escapeHTML(str){
   }[s]));
 }
 
-/* Вытаскиваем из текста теги <img src="..."> ДО экранирования, чтобы
-   картинки, вставленные через подсказку в админке, реально показывались,
-   а весь остальной текст (в т.ч. случайно введённые < и >) оставался
-   безопасным текстом, а не выполнялся как HTML. */
-function extractImages(raw){
-  const found = [];
-  const withPlaceholders = raw.replace(/<img\s+[^<>]*?src\s*=\s*["']([^"']+)["'][^<>]*?>/gi, (m, src) => {
-    const idx = found.length;
-    found.push(`<img class="prose-img" src="${escapeHTML(src.trim())}" alt="" loading="lazy">`);
-    return `\u0000IMG${idx}\u0000`;
-  });
-  return { withPlaceholders, found };
-}
-
 function restoreImages(escapedText, found){
   return escapedText.replace(/\u0000IMG(\d+)\u0000/g, (m, i) => found[Number(i)] ?? "");
 }
