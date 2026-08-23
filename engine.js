@@ -65,11 +65,6 @@ function charactersFor(ids){
   return (ids||[]).map(findCharacter).filter(Boolean);
 }
 
-function sealHTML(status, label){
-  const st = status === "alive" ? "alive" : status === "dead" ? "dead" : "unknown";
-  return `<span class="seal" data-status="${st}"><span class="dot" aria-hidden="true"></span>${escapeHTML(label)}</span>`;
-}
-
 function rosterHTML(chars){
   if(!chars.length) return `<p class="empty">Пока никто не привязан к этой записи.</p>`;
   return `<div class="roster">${chars.map(c => `
@@ -139,9 +134,7 @@ function renderHome(){
   return `
   <section class="view">
     <div class="log-hero">
-      <span class="eyebrow">Судовой журнал вольного архипелага</span>
       <h1>${escapeHTML(DATA.siteTitle)}</h1>
-      <p class="lede">${escapeHTML(DATA.siteTagline)}. Здесь собраны земли и воды архипелага, корабли, что их бороздят, и люди, что делают эти истории живыми.</p>
     </div>
 
     <div class="registry">
@@ -165,19 +158,18 @@ function renderMap(){
   const hasImage = !!(DATA.mapImage && DATA.mapImage.trim());
   return `
   <section class="view">
-    <span class="eyebrow">Навигационная карта</span>
     <h1>Карта архипелага</h1>
-    <p class="section-intro">Наведите на метку (или нажмите на неё на телефоне), чтобы увидеть досье локации, либо перейдите на её страницу.</p>
+    <p class="section-intro">Нажать на метку, чтобы увидеть досье и перейти на её страницу.</p>
 
     <div class="map-search">
-      <input type="search" id="map-search" placeholder="Поиск локации по названию…" value="${escapeHTML(mapSearchQuery)}" aria-label="Поиск локации на карте">
+      <input type="search" id="map-search" placeholder="Поиск по названию" value="${escapeHTML(mapSearchQuery)}" aria-label="Поиск локации на карте">
     </div>
 
     <div class="map-wrap" id="map-wrap">
       ${hasImage
-        ? `<img class="map-image" src="${escapeHTML(DATA.mapImage)}" alt="Карта архипелага" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='flex');">
-           <div class="map-placeholder" style="display:none;">Не удалось загрузить картинку карты. Проверьте ссылку в data/site-info.js (поле mapImage).</div>`
-        : `<div class="map-placeholder">Картинка карты не задана. Укажите ссылку в data/site-info.js (поле mapImage).</div>`
+        ? `<img class="map-image" src="${escapeHTML(DATA.mapImage)}" alt="Карта" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='flex');">
+           <div class="map-placeholder" style="display:none;">Не удалось загрузить картинку карты.</div>`
+        : `<div class="map-placeholder">Картинки вообще нет.</div>`
       }
       <div class="map-pins">
         ${pinned.map(loc => `
@@ -245,9 +237,8 @@ function attachMapHandlers(){
 function renderLocationsList(){
   return `
   <section class="view">
-    <span class="eyebrow">Карты и территории</span>
     <h1>Локации</h1>
-    <p class="section-intro">Города, стоянки и проклятые берега архипелага — с кратким досье и списком тех, кто там обитает или бывает.</p>
+    <p class="section-intro">Сборник всех мест.</p>
     <div class="grid">
       ${DATA.locations.map(loc => `
         <a class="card" href="#location/${loc.id}">
@@ -286,9 +277,8 @@ function renderLocationDetail(id){
 function renderShipsList(){
   return `
   <section class="view">
-    <span class="eyebrow">Судовой реестр</span>
     <h1>Корабли</h1>
-    <p class="section-intro">Всё, что держится на плаву — и то, что перестало.</p>
+    <p class="section-intro">Всё, что держится на плаву.</p>
     <div class="grid">
       ${DATA.ships.map(sh => `
         <a class="card" href="#ship/${sh.id}">
@@ -325,7 +315,7 @@ function renderShipDetail(id){
 }
 
 // ---- персонажи: фильтр + поиск ----
-let charFilterState = { q: "", role: "all", faction: "all", status: "all", tag: "all" };
+let charFilterState = { q: "", role: "all", faction: "all", ship: "all", tag: "all" };
 
 function uniqueValues(arr, key){
   return [...new Set(arr.map(x => x[key]).filter(Boolean))].sort();
@@ -333,19 +323,23 @@ function uniqueValues(arr, key){
 function uniqueTags(arr){
   return [...new Set(arr.flatMap(x => x.tags||[]))].sort();
 }
+function uniqueShips(chars){
+  const ids = [...new Set(chars.map(c => c.shipId).filter(Boolean))];
+  return ids.map(findShip).filter(Boolean).sort((a,b) => a.name.localeCompare(b.name, "ru"));
+}
 
 function renderCharactersList(){
   const roles = uniqueValues(DATA.characters, "role");
   const factions = uniqueValues(DATA.characters, "faction");
+  const ships = uniqueShips(DATA.characters);
   const tags = uniqueTags(DATA.characters);
   return `
   <section class="view characters-view">
-    <span class="eyebrow">Личные дела</span>
     <h1>Персонажи</h1>
-    <p class="section-intro">Ищите по имени или сузите список по роли, фракции, статусу и меткам.</p>
+    <p class="section-intro">Досье персов.</p>
 
     <div class="char-filters">
-      <input type="search" id="char-search" placeholder="Поиск по имени…" value="${escapeHTML(charFilterState.q)}" aria-label="Поиск персонажа по имени">
+      <input type="search" id="char-search" placeholder="Поиск по имени" value="${escapeHTML(charFilterState.q)}" aria-label="Поиск персонажа по имени">
       <select id="filter-role" aria-label="Фильтр по роли">
         <option value="all">Все роли</option>
         ${roles.map(r => `<option value="${escapeHTML(r)}" ${charFilterState.role===r?'selected':''}>${escapeHTML(r)}</option>`).join("")}
@@ -354,11 +348,10 @@ function renderCharactersList(){
         <option value="all">Все фракции</option>
         ${factions.map(f => `<option value="${escapeHTML(f)}" ${charFilterState.faction===f?'selected':''}>${escapeHTML(f)}</option>`).join("")}
       </select>
-      <select id="filter-status" aria-label="Фильтр по статусу">
-        <option value="all">Любой статус</option>
-        <option value="alive" ${charFilterState.status==='alive'?'selected':''}>Жив</option>
-        <option value="dead" ${charFilterState.status==='dead'?'selected':''}>Погиб</option>
-        <option value="unknown" ${charFilterState.status==='unknown'?'selected':''}>Неизвестно</option>
+      <select id="filter-ship" aria-label="Фильтр по кораблю">
+        <option value="all">Все корабли</option>
+        <option value="none" ${charFilterState.ship==='none'?'selected':''}>Без корабля</option>
+        ${ships.map(s => `<option value="${escapeHTML(s.id)}" ${charFilterState.ship===s.id?'selected':''}>${escapeHTML(s.name)}</option>`).join("")}
       </select>
       <select id="filter-tag" aria-label="Фильтр по метке">
         <option value="all">Все метки</option>
@@ -378,7 +371,8 @@ function filterCharacters(){
     if(q && !c.name.toLowerCase().includes(q)) return false;
     if(charFilterState.role !== "all" && c.role !== charFilterState.role) return false;
     if(charFilterState.faction !== "all" && c.faction !== charFilterState.faction) return false;
-    if(charFilterState.status !== "all" && c.status !== charFilterState.status) return false;
+    if(charFilterState.ship === "none"){ if(c.shipId) return false; }
+    else if(charFilterState.ship !== "all" && c.shipId !== charFilterState.ship) return false;
     if(charFilterState.tag !== "all" && !(c.tags||[]).includes(charFilterState.tag)) return false;
     return true;
   });
@@ -390,7 +384,6 @@ function renderCharacterCard(c){
       ${imgTag(c.image, c.id, c.name, "thumb")}
       <span class="card-type">${escapeHTML(c.role)}</span>
       <h3>${escapeHTML(c.name)}</h3>
-      ${sealHTML(c.status, c.statusLabel)}
       <p class="card-desc">${escapeHTML(c.shortBio)}</p>
       <div class="card-tags">${(c.tags||[]).slice(0,3).map(t=>`<span class="chip">${escapeHTML(t)}</span>`).join("")}</div>
     </a>`;
@@ -414,14 +407,14 @@ function attachCharacterFilterHandlers(){
   document.getElementById("filter-faction").addEventListener("change", e => {
     charFilterState.faction = e.target.value; updateCharGrid();
   });
-  document.getElementById("filter-status").addEventListener("change", e => {
-    charFilterState.status = e.target.value; updateCharGrid();
+  document.getElementById("filter-ship").addEventListener("change", e => {
+    charFilterState.ship = e.target.value; updateCharGrid();
   });
   document.getElementById("filter-tag").addEventListener("change", e => {
     charFilterState.tag = e.target.value; updateCharGrid();
   });
   document.getElementById("filter-reset").addEventListener("click", () => {
-    charFilterState = { q:"", role:"all", faction:"all", status:"all", tag:"all" };
+    charFilterState = { q:"", role:"all", faction:"all", ship:"all", tag:"all" };
     document.getElementById("app").innerHTML = renderCharactersList();
     attachCharacterFilterHandlers();
   });
@@ -445,7 +438,6 @@ function renderCharacterDetail(id){
       <div class="detail-facts">
         <span class="card-type">${escapeHTML(c.role)}</span>
         <h1>${escapeHTML(c.name)}</h1>
-        ${sealHTML(c.status, c.statusLabel)}
         <table class="facts-table">
           <tr><td class="k">Фракция</td><td>${escapeHTML(c.faction)}</td></tr>
           <tr><td class="k">Локация</td><td>${loc ? `<a href="#location/${loc.id}">${escapeHTML(loc.name)}</a>` : "&mdash;"}</td></tr>
@@ -478,7 +470,6 @@ function renderCharacterDetail(id){
 function renderHistory(){
   return `
   <section class="view">
-    <span class="eyebrow">Хроника архипелага</span>
     <h1>История</h1>
     <p class="section-intro">Ключевые вехи мира в хронологическом порядке.</p>
     <div class="timeline">
@@ -500,7 +491,6 @@ function renderNotes(){
   const tags = uniqueTags(DATA.notes.map(n => ({tags:n.tags})));
   return `
   <section class="view">
-    <span class="eyebrow">Черновик капитана</span>
     <h1>Заметки</h1>
     <p class="section-intro">Мелкие идеи, нестыковки и зацепки на будущее — то, что ещё не оформилось в полноценную статью.</p>
     <div class="note-filters" id="note-filters">
