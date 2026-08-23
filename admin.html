@@ -166,13 +166,6 @@
           <input type="text" id="cfg-repo" placeholder="например, black-tide-codex">
         </div>
         <label class="admin-field">
-          <span>Ветка</span>
-          <select id="cfg-branch">
-            <option value="main">main</option>
-          </select>
-          <small id="branch-hint" hidden>Не удалось получить список веток из GitHub — оставлено значение по умолчанию.</small>
-        </label>
-        <label class="admin-field">
           <span>Personal Access Token</span>
           <input type="password" id="cfg-token" placeholder="ghp_… или github_pat_…">
           <small>Fine-grained token → выбрать этот репозиторий → права Contents: Read and write.</small>
@@ -202,6 +195,7 @@
 // только для локального тестирования, обычным пользователям не нужно.
 const API_BASE = new URLSearchParams(location.search).get("apiBase") || "https://api.github.com";
 const CONFIG_KEY = "codexAdminConfig_v1";
+const DEFAULT_BRANCH = "main"; // ветку больше не выбирают в интерфейсе — всегда работаем с main
 
 function escapeHtml(str){
   return String(str ?? "").replace(/[&<>"']/g, s => ({
@@ -263,37 +257,6 @@ function applyAutoDetect(){
     repoWrap.hidden = false;
     detectedLine.hidden = true;
   }
-  loadBranches();
-}
-
-// ---------- список веток репозитория (выпадающий список вместо ручного ввода) ----------
-async function loadBranches(){
-  const owner = document.getElementById("cfg-owner").value.trim();
-  const repo = document.getElementById("cfg-repo").value.trim();
-  const branchSel = document.getElementById("cfg-branch");
-  const branchHint = document.getElementById("branch-hint");
-  if(!owner || !repo) return;
-
-  const wanted = getConfig().branch || branchSel.value || "main";
-  try{
-    const headers = { Accept: "application/vnd.github+json" };
-    const token = document.getElementById("cfg-token").value.trim();
-    if(token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/repos/${owner}/${repo}/branches?per_page=100`, { headers });
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const branches = await res.json();
-    if(!Array.isArray(branches) || !branches.length) throw new Error("empty");
-    branchSel.innerHTML = branches.map(b => `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`).join("");
-    branchSel.value = branches.some(b => b.name === wanted) ? wanted : branches[0].name;
-    branchHint.hidden = true;
-  }catch(e){
-    // не получилось получить ветки (нет доступа, репозиторий ещё не введён и т.п.) —
-    // оставляем то, что уже есть в списке (как минимум "main"), просто предупреждаем.
-    if(!branchSel.options.length){
-      branchSel.innerHTML = `<option value="${escapeAttr(wanted)}">${escapeHtml(wanted)}</option>`;
-    }
-    branchHint.hidden = false;
-  }
 }
 
 document.getElementById("repo-manual-toggle").addEventListener("click", () => {
@@ -304,9 +267,6 @@ document.getElementById("repo-manual-toggle").addEventListener("click", () => {
   document.getElementById("repo-field-wrap").hidden = false;
   document.getElementById("repo-detected-line").hidden = true;
 });
-document.getElementById("cfg-owner").addEventListener("blur", loadBranches);
-document.getElementById("cfg-repo").addEventListener("blur", loadBranches);
-document.getElementById("cfg-token").addEventListener("blur", loadBranches);
 
 // ---------- конфиг / localStorage ----------
 function getConfig(){
@@ -880,7 +840,7 @@ document.getElementById("connect-form").addEventListener("submit", async e => {
   e.preventDefault();
   const owner = document.getElementById("cfg-owner").value.trim();
   const repo = document.getElementById("cfg-repo").value.trim();
-  const branch = document.getElementById("cfg-branch").value.trim() || "main";
+  const branch = DEFAULT_BRANCH;
   const token = document.getElementById("cfg-token").value.trim();
   if(!owner || !repo || !token){ showStatus("Заполните владельца, репозиторий и токен.", "error"); return; }
   const prevCfg = getConfig();
@@ -926,7 +886,6 @@ document.getElementById("disconnect-btn").addEventListener("click", () => {
     if(cfg.owner) document.getElementById("cfg-owner").value = cfg.owner;
     if(cfg.repo) document.getElementById("cfg-repo").value = cfg.repo;
   }
-  if(cfg.branch) document.getElementById("cfg-branch").value = cfg.branch;
   if(cfg.token) document.getElementById("cfg-token").value = cfg.token;
   const owner = document.getElementById("cfg-owner").value;
   const repo = document.getElementById("cfg-repo").value;
