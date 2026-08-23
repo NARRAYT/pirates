@@ -893,15 +893,15 @@ function renderBook(){
     <h1 class="sr-only">Книга</h1>
     <div class="book-stage">
       <div class="book-wrap">
-        <button type="button" class="book-toc-tab" id="book-toc-btn" aria-expanded="false">Оглавление</button>
         <div class="book-toc-panel" id="book-toc" hidden></div>
 
         ${renderBookNavRow("top")}
 
         <div class="book-surface">
+          <button type="button" class="book-toc-tab" id="book-toc-btn" aria-expanded="false">Оглавление</button>
           <div class="book" id="book" tabindex="0"></div>
           <div class="book-margin" id="book-margin" title="Нажмите на поле, чтобы отметить закладкой это место"></div>
-          <div class="book-ribbon" id="book-ribbon" hidden title="Нажмите, чтобы вернуться к закладке"></div>
+          <div class="book-ribbon" id="book-ribbon" hidden title="Показывает, где вы остановились. Нажмите, чтобы переставить закладку"></div>
         </div>
 
         ${renderBookNavRow("bottom")}
@@ -985,7 +985,9 @@ function closeBookTOC(){
 }
 
 // Клик/тап по узкому полю у края листа — опускает туда ленточку-закладку
-// на высоту клика (в долях от высоты текущего листа).
+// на высоту клика (в долях от высоты текущего листа). Ленточка сама по
+// себе реагирует на клик точно так же — она лишь показывает, где
+// остановился читатель, а не переносит к старой отметке.
 function onBookMarginClick(e){
   const margin = document.getElementById("book-margin");
   if(!margin) return;
@@ -993,12 +995,6 @@ function onBookMarginClick(e){
   const ratio = (e.clientY - rect.top) / rect.height;
   saveBookmark(bookChapterIdx, ratio);
   updateRibbonUI(false);
-  const ribbon = document.getElementById("book-ribbon");
-  if(ribbon){
-    ribbon.classList.remove("book-ribbon--pulse");
-    void ribbon.offsetWidth; // перезапускаем анимацию
-    ribbon.classList.add("book-ribbon--pulse");
-  }
 }
 
 function attachBookHandlers(){
@@ -1032,11 +1028,7 @@ function attachBookHandlers(){
   });
   if(tocBtn) tocBtn.addEventListener("click", toggleBookTOC);
   if(margin) margin.addEventListener("click", onBookMarginClick);
-  if(ribbon) ribbon.addEventListener("click", e => {
-    e.stopPropagation();
-    const cur = loadBookmark();
-    if(cur && cur.chapterIdx === bookChapterIdx) scrollToRatio(cur.ratio, true);
-  });
+  if(ribbon) ribbon.addEventListener("click", onBookMarginClick);
   if(!book) return;
 
   book.addEventListener("keydown", e => {

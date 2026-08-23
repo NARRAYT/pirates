@@ -534,25 +534,26 @@ button{ font-family: var(--font-body); cursor:pointer; }
 .book-nav-btn:hover:not(:disabled){ color:#fff; background: rgba(0,0,0,.34); }
 .book-nav-btn:disabled{ opacity:.3; cursor:default; }
 
-/* закладка-ярлычок, открывающая оглавление */
+/* закладка-ярлычок, открывающая оглавление: сидит ВНУТРИ book-surface,
+   перед листом в DOM — поэтому непрозрачный лист естественно перекрывает
+   её нижнюю часть, и наружу выглядывает только верхний краешек, как
+   настоящий бумажный ярлычок, торчащий из-за страницы */
 .book-toc-tab{
   position:absolute;
   top:0;
   right:22px;
-  transform: translateY(-100%);
+  transform: translateY(-62%);
   font-family: var(--font-stamp);
   font-size:.66rem;
   letter-spacing:.08em;
   text-transform:uppercase;
   padding:7px 14px;
   border:1px solid #542d29;
-  border-bottom:none;
   border-radius:4px 4px 0 0;
   font-weight:bold;
   background: #501b1b;
   color: #020101;
   cursor:pointer;
-  z-index:3;
   transition: background .15s ease;
 }
 .book-toc-tab:hover{ filter:brightness(1.15); }
@@ -680,11 +681,6 @@ button{ font-family: var(--font-body); cursor:pointer; }
   transition: filter .15s ease;
 }
 .book-ribbon:hover::before{ filter:brightness(1.2); }
-.book-ribbon--pulse::before{ animation: book-ribbon-pulse .5s ease; }
-@keyframes book-ribbon-pulse{
-  0%{ filter:brightness(1.9); }
-  100%{ filter:brightness(1); }
-}
 
 @media (max-width:780px){
   .book{ padding:26px 40px 34px 26px; font-size:1rem; }
