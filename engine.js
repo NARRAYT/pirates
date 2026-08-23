@@ -1013,9 +1013,13 @@ function attachBookHandlers(){
   renderBookPageDOM();
 
   // При заходе в раздел, если на открытой главе есть закладка — сразу
-  // показываем то место, где читатель остановился в прошлый раз.
+  // показываем то место, где читатель остановился в прошлый раз (без
+  // промежуточного прыжка наверх). Если закладки нет — просто наверх,
+  // как обычная страница.
   if(bm && bm.chapterIdx === bookChapterIdx){
     requestAnimationFrame(() => requestAnimationFrame(() => scrollToRatio(bm.ratio, false)));
+  }else{
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   const book = document.getElementById("book");
@@ -1131,7 +1135,13 @@ function render(){
         <p><a href="#home">Вернуться на главную</a></p>
       </section>`;
   }
-  window.scrollTo({ top: 0, behavior: "instant" });
+  // На развороте книги прокрутку делает сама attachBookHandlers — либо
+  // сразу наверх, либо (если на главе есть закладка) вниз к отметке.
+  // Если здесь же сбрасывать скролл в 0, страницу дёргает: сначала
+  // прыжок наверх, а через кадр — обратно вниз к закладке.
+  if(route !== "book"){
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
 }
 
 buildSpineTabs();
