@@ -680,7 +680,7 @@ button{ font-family: var(--font-body); cursor:pointer; }
   box-shadow: 0 2px 8px rgba(0,0,0,.45);
   transition: filter .15s ease;
 }
-.book-ribbon:hover::before{ filter:brightness(1.2); }
+
 
 @media (max-width:780px){
   .book{ padding:26px 40px 34px 26px; font-size:1rem; }
