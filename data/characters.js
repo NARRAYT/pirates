@@ -47,8 +47,6 @@ window.SITE_DATA.characters = [
     "id": "char-tomas",
     "name": "Томас Уэйнрайт",
     "role": "Капитан",
-    "status": "alive",
-    "statusLabel": "",
     "faction": "Британия",
     "locationId": null,
     "shipId": "ship-subbota",
@@ -56,7 +54,12 @@ window.SITE_DATA.characters = [
       "капитан"
     ],
     "image": "",
-    "references": [],
+    "references": [
+      {
+        "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLXYtJs1VEL4u-N6CNZZy_9Uni9fspdzJJonBl9RdMK0NlyaQjVdfQr83y&s=10",
+        "caption": "референс"
+      }
+    ],
     "arts": [],
     "shortBio": "руруру",
     "biography": "оуоуоуо",
