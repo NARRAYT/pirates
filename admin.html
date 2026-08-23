@@ -167,7 +167,10 @@
         </div>
         <label class="admin-field">
           <span>Ветка</span>
-          <input type="text" id="cfg-branch" placeholder="main" value="main">
+          <select id="cfg-branch">
+            <option value="main">main</option>
+          </select>
+          <small id="branch-hint" hidden>Не удалось получить список веток из GitHub — оставлено значение по умолчанию.</small>
         </label>
         <label class="admin-field">
           <span>Personal Access Token</span>
@@ -260,6 +263,37 @@ function applyAutoDetect(){
     repoWrap.hidden = false;
     detectedLine.hidden = true;
   }
+  loadBranches();
+}
+
+// ---------- список веток репозитория (выпадающий список вместо ручного ввода) ----------
+async function loadBranches(){
+  const owner = document.getElementById("cfg-owner").value.trim();
+  const repo = document.getElementById("cfg-repo").value.trim();
+  const branchSel = document.getElementById("cfg-branch");
+  const branchHint = document.getElementById("branch-hint");
+  if(!owner || !repo) return;
+
+  const wanted = getConfig().branch || branchSel.value || "main";
+  try{
+    const headers = { Accept: "application/vnd.github+json" };
+    const token = document.getElementById("cfg-token").value.trim();
+    if(token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/repos/${owner}/${repo}/branches?per_page=100`, { headers });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const branches = await res.json();
+    if(!Array.isArray(branches) || !branches.length) throw new Error("empty");
+    branchSel.innerHTML = branches.map(b => `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`).join("");
+    branchSel.value = branches.some(b => b.name === wanted) ? wanted : branches[0].name;
+    branchHint.hidden = true;
+  }catch(e){
+    // не получилось получить ветки (нет доступа, репозиторий ещё не введён и т.п.) —
+    // оставляем то, что уже есть в списке (как минимум "main"), просто предупреждаем.
+    if(!branchSel.options.length){
+      branchSel.innerHTML = `<option value="${escapeAttr(wanted)}">${escapeHtml(wanted)}</option>`;
+    }
+    branchHint.hidden = false;
+  }
 }
 
 document.getElementById("repo-manual-toggle").addEventListener("click", () => {
@@ -270,6 +304,9 @@ document.getElementById("repo-manual-toggle").addEventListener("click", () => {
   document.getElementById("repo-field-wrap").hidden = false;
   document.getElementById("repo-detected-line").hidden = true;
 });
+document.getElementById("cfg-owner").addEventListener("blur", loadBranches);
+document.getElementById("cfg-repo").addEventListener("blur", loadBranches);
+document.getElementById("cfg-token").addEventListener("blur", loadBranches);
 
 // ---------- конфиг / localStorage ----------
 function getConfig(){
