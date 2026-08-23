@@ -323,15 +323,14 @@ function uniqueValues(arr, key){
 function uniqueTags(arr){
   return [...new Set(arr.flatMap(x => x.tags||[]))].sort();
 }
-function uniqueShips(chars){
-  const ids = [...new Set(chars.map(c => c.shipId).filter(Boolean))];
-  return ids.map(findShip).filter(Boolean).sort((a,b) => a.name.localeCompare(b.name, "ru"));
+function uniqueShips(){
+  return [...DATA.ships].sort((a,b) => a.name.localeCompare(b.name, "ru"));
 }
 
 function renderCharactersList(){
   const roles = uniqueValues(DATA.characters, "role");
   const factions = uniqueValues(DATA.characters, "faction");
-  const ships = uniqueShips(DATA.characters);
+  const ships = uniqueShips();
   const tags = uniqueTags(DATA.characters);
   return `
   <section class="view characters-view">
