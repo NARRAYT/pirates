@@ -566,7 +566,7 @@ footer.site-foot{
   position:absolute;
   bottom: 28px; left:50%;
   transform: translateX(-50%);
-  width:300px;
+  width:350px;
   background: var(--parchment-light);
   border:1px solid var(--parchment-dark);
   box-shadow: 0 12px 26px rgba(0,0,0,.6);
@@ -578,7 +578,7 @@ footer.site-foot{
   gap:12px;
 }
 .map-pin-card img.thumb{
-  width:88px; height:88px; flex:0 0 auto;
+  width:130px; height:150px; flex:0 0 auto;
   object-fit:cover;
   border:1px solid var(--parchment-dark);
   margin:0;
