@@ -48,7 +48,7 @@ window.SITE_DATA.characters = [
     "name": "Томас Уэйнрайт",
     "role": "Капитан",
     "faction": "Британия",
-    "locationId": null,
+    "locationId": "loc-london",
     "shipId": "ship-subbota",
     "tags": [
       "капитан"
