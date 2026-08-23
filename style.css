@@ -698,7 +698,7 @@ footer.site-foot{
   width:100%;
   margin-top:14px;
   border:1px solid var(--parchment-dark);
-  box-shadow: 0 1px 0 rgba(255,255,255,.15) inset, 0 14px 30px var(--shadow);
+  box-shadow: 0 1px 0 rgba(255,255,255,.15) inset, 0 1px 10px var(--shadow);
   background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='mp'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.16  0 0 0 0 0.11  0 0 0 0 0.06  0 0 0 0.45 0'/></filter><rect width='180' height='180' filter='url(%23mp)'/></svg>"),
     var(--parchment-light);
