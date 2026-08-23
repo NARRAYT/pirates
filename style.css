@@ -556,8 +556,7 @@ button{ font-family: var(--font-body); cursor:pointer; }
   cursor:pointer;
   transition: background .15s ease;
 }
-.book-toc-tab:hover{ filter:brightness(0.15); }
-.book-toc-tab[aria-expanded="true"]{ background: #411313; }
+.book-toc-tab:hover{ filter:brightness(1.15); }
 
 /* оглавление — компактная панель, всплывающая ПОВЕРХ книги */
 .book-toc-panel{
