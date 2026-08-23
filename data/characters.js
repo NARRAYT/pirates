@@ -68,12 +68,12 @@ window.SITE_DATA.characters = [
   {
     "id": "char-dzheremi",
     "name": "Джереми",
-    "role": "Говноед",
+    "role": "Капитан",
     "faction": "Британия",
-    "locationId": null,
+    "locationId": "loc-pab-grinkrou",
     "shipId": "ship-meri",
     "tags": [
-      "Говноед",
+      "говноед",
       "капитан"
     ],
     "image": "https://bugaga.ru/uploads/posts/2016-08/1470756070_koshki-piraty-4.jpg",
