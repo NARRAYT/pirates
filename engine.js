@@ -506,7 +506,8 @@ function updateNotesList(){
   document.getElementById("notes-list").innerHTML = list.length ? list.map(n => `
     <div class="note-card">
       <h3>${escapeHTML(n.title)}</h3>
-      <p>${escapeHTML(n.text)}</p>
+      <p>${n.text}</p>
+      
       <div class="card-tags">${(n.tags||[]).map(t=>`<span class="chip">${escapeHTML(t)}</span>`).join("")}</div>
     </div>
   `).join("") : `<p class="empty">Заметок с такой меткой пока нет.</p>`;
