@@ -595,6 +595,7 @@ button{ font-family: var(--font-body); cursor:pointer; }
    поверх него по всей его фактической высоте. */
 .book-surface{
   position:relative;
+  overflow-anchor: none;
 }
 
 /* сам лист — один плоский слой без 3D и перелистывания. Формат —
@@ -648,6 +649,9 @@ button{ font-family: var(--font-body); cursor:pointer; }
   cursor: pointer;
   background: linear-gradient(90deg, transparent, rgba(0,0,0,.05));
   transition: background .15s ease;
+  /* иначе браузер сам подгоняет прокрутку страницы при изменении
+     размеров этого блока — из-за чего рябит в глазах */
+  overflow-anchor: none;
 }
 .book-margin:hover{ background: linear-gradient(90deg, transparent, rgba(42,18,12,.14)); }
 
@@ -668,6 +672,10 @@ button{ font-family: var(--font-body); cursor:pointer; }
   cursor:pointer;
   z-index:2;
   transition: height .45s cubic-bezier(.2,.8,.3,1);
+  /* без этого браузер при каждом изменении высоты ленты сам двигает
+     прокрутку страницы, чтобы "компенсировать" сдвиг контента — из-за
+     чего страницу дёргает/рябит в глазах */
+  overflow-anchor: none;
 }
 /* при открытии/обновлении страницы и смене главы ленточка должна сразу
    встать на своё место без анимации — плавно она "поднимается" только
