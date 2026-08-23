@@ -16,7 +16,7 @@ window.SITE_DATA.notes = [
     "tags": [
       "лор"
     ],
-    "text": "прр"
+    "text": "прр <img src=\"https://e.radikal.host/2026/08/13/frrr.png\">"
   },
   {
     "title": "правило трёх драк",
