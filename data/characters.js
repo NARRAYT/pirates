@@ -30,28 +30,14 @@ window.SITE_DATA.characters = [
     "status": "alive",
     "statusLabel": "Жив",
     "faction": "Испания",
-    "locationId": "loc-siren-cove",
+    "locationId": "loc-pab-grinkrou",
     "shipId": "ship-subbota",
     "tags": [
       "канонир"
     ],
     "image": "",
-    "references": [
-      {
-        "src": "",
-        "caption": "Референс костюма — капитанский плащ"
-      },
-      {
-        "src": "",
-        "caption": "Референс — абордажная сабля с гравировкой"
-      }
-    ],
-    "arts": [
-      {
-        "src": "",
-        "caption": "Портрет за штурвалом"
-      }
-    ],
+    "references": [],
+    "arts": [],
     "shortBio": "сяусяуся",
     "biography": "мимуимиуи",
     "historyNotes": "инфо инфо инфо"
