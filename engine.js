@@ -879,10 +879,10 @@ function renderBookNavRow(idPrefix){
   return `
   <div class="book-nav-row">
     <button type="button" class="book-nav-btn" id="book-prev-${idPrefix}" aria-label="Предыдущая глава">
-      <span class="book-nav-arrow">&#10094;</span><span>Предыдущая глава</span>
+      <span class="book-nav-arrow">&#10094;</span><span>
     </button>
     <button type="button" class="book-nav-btn" id="book-next-${idPrefix}" aria-label="Следующая глава">
-      <span>Следующая глава</span><span class="book-nav-arrow">&#10095;</span>
+      <span class="book-nav-arrow">&#10095;</span>
     </button>
   </div>`;
 }
