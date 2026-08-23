@@ -135,11 +135,15 @@
     width:80px; padding:5px 7px; border:1px solid var(--ink-soft); font-family:var(--font-body);
   }
 
-  .admin-status{ font-size:.88rem; margin-top:10px; padding:8px 10px; border-left:3px solid var(--gold); display:none; }
+  .admin-status{
+    font-size:.88rem; margin-top:10px; padding:8px 10px;
+    border-left:3px solid var(--gold); display:none;
+    color: var(--ink); background: rgba(22,18,14,.05);
+  }
   .admin-status.show{ display:block; }
-  .admin-status.success{ border-color:#3e6b3e; color:#c9e6c9; }
-  .admin-status.error{ border-color:#7a2418; color:#f0c9c2; }
-  .admin-status.info{ border-color:var(--gold-bright); color:var(--parchment-light); }
+  .admin-status.success{ border-color: var(--gold-bright); }
+  .admin-status.error{ border-color:#7a2418; color:#5a1c12; background: rgba(122,36,24,.08); }
+  .admin-status.info{ border-color: var(--ink-soft); }
 
   .admin-toast{
     position:fixed; right:18px; bottom:18px; max-width:340px;
@@ -171,16 +175,10 @@
         Не удалось определить репозиторий автоматически. Откройте эту страницу по адресу вида
         <code>https://username.github.io/repo/admin.html</code> (там, где опубликован сайт через GitHub Pages).
       </p>
+      <input type="hidden" id="cfg-owner">
+      <input type="hidden" id="cfg-repo">
       <div class="admin-grid2" id="repo-fields-grid">
-        <div class="admin-field" id="owner-field-wrap" hidden>
-          <span>Владелец репозитория</span>
-          <input type="text" id="cfg-owner" readonly>
-        </div>
-        <div class="admin-field" id="repo-field-wrap" hidden>
-          <span>Название репозитория</span>
-          <input type="text" id="cfg-repo" readonly>
-        </div>
-        <label class="admin-field">
+        <label class="admin-field" style="grid-column:1/-1">
           <span>Personal Access Token</span>
           <input type="password" id="cfg-token" placeholder="ghp_… или github_pat_…">
           <small>Fine-grained token → выбрать этот репозиторий → права Contents: Read and write.</small>
@@ -188,7 +186,6 @@
       </div>
       <div class="admin-form-actions">
         <button type="submit" class="btn">Подключиться</button>
-        <button type="button" class="btn btn-ghost" id="disconnect-btn">Выйти / забыть токен</button>
       </div>
       <div class="admin-status" id="connect-status"></div>
     </form>
@@ -916,17 +913,6 @@ document.getElementById("connect-form").addEventListener("submit", async e => {
   }catch(err){
     showStatus("Ошибка подключения: " + err.message, "error");
   }
-});
-
-document.getElementById("disconnect-btn").addEventListener("click", () => {
-  clearConfig();
-  cache = {};
-  tabsEl.hidden = true;
-  tabsEl.innerHTML = "";
-  contentEl.innerHTML = "";
-  document.getElementById("cfg-token").value = "";
-  applyAutoDetect();
-  showStatus("Токен забыт. Данные для входа удалены из этого браузера.", "info");
 });
 
 // ---------- автозаполнение при открытии, если токен уже сохранён ----------

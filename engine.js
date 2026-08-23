@@ -135,6 +135,7 @@ function renderHome(){
   <section class="view">
     <div class="log-hero">
       <h1>${escapeHTML(DATA.siteTitle)}</h1>
+      ${DATA.siteTagline ? `<p class="lede">${escapeHTML(DATA.siteTagline)}</p>` : ""}
     </div>
 
     <div class="registry">
