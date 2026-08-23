@@ -26,7 +26,7 @@ window.SITE_DATA.characters = [
     "name": "Логан Лорец",
     "role": "Канонир",
     "faction": "Испания",
-    "locationId": null,
+    "locationId": "loc-pab-grinkrou",
     "shipId": "ship-subbota",
     "tags": [
       "канонир"
