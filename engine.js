@@ -851,20 +851,22 @@ function scrollToRatio(ratio, smooth){
 // (загрузка страницы, переход в раздел, смена главы). Без этого флага
 // (клик по полю, чтобы отметить место) высота меняется плавно, "лента
 // поднимается до курсора", а не перескакивает к отметке рывком.
+// Лента видна всегда: если на текущей главе закладки ещё нет, она
+// висит коротким язычком (высота задаётся в CSS по умолчанию) — это
+// и есть подсказка, что сюда можно кликнуть и поставить закладку.
 function updateRibbonUI(instant){
   const ribbon = document.getElementById("book-ribbon");
   if(!ribbon) return;
   const bm = loadBookmark();
   const onThisChapter = bm && bm.chapterIdx === bookChapterIdx;
-  ribbon.hidden = !onThisChapter;
-  if(!onThisChapter) return;
+  const targetHeight = onThisChapter ? (bm.ratio * 100) + "%" : "";
   if(instant){
     ribbon.classList.add("book-ribbon--instant");
-    ribbon.style.height = (bm.ratio * 100) + "%";
+    ribbon.style.height = targetHeight;
     void ribbon.offsetHeight; // применяем без анимации
     ribbon.classList.remove("book-ribbon--instant");
   }else{
-    ribbon.style.height = (bm.ratio * 100) + "%";
+    ribbon.style.height = targetHeight;
   }
 }
 
@@ -901,7 +903,7 @@ function renderBook(){
           <button type="button" class="book-toc-tab" id="book-toc-btn" aria-expanded="false">Оглавление</button>
           <div class="book" id="book" tabindex="0"></div>
           <div class="book-margin" id="book-margin" title="Нажмите на поле, чтобы отметить закладкой это место"></div>
-          <div class="book-ribbon" id="book-ribbon" hidden title="Показывает, где вы остановились. Нажмите, чтобы переставить закладку"></div>
+          <div class="book-ribbon" id="book-ribbon" title="Нажмите, чтобы поставить закладку"></div>
         </div>
 
         ${renderBookNavRow("bottom")}
