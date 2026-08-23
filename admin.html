@@ -93,12 +93,11 @@
     color:var(--parchment-light); width:100%; max-width:380px; cursor:pointer;
   }
 
-  .admin-repo-detected{ font-size:.88rem; margin:-4px 0 14px; }
-  .btn-link{
-    background:none; border:none; padding:0; font:inherit; color:var(--gold-bright, var(--gold));
-    text-decoration:underline; cursor:pointer;
+  .admin-repo-error{
+    font-size:.88rem; margin:0 0 16px; padding:8px 10px;
+    background: rgba(122,36,24,.15); border:1px solid #7a2418; color: var(--ink);
   }
-  #owner-field-wrap[hidden], #repo-field-wrap[hidden]{ display:none; }
+  .admin-repo-error code{ font-family: var(--font-stamp); font-size:.9em; }
 
   .admin-mappoint-box{
     position:relative; width:100%; max-width:520px; border:1px solid var(--ink-soft);
@@ -152,7 +151,19 @@
   <section class="admin-card" id="setup-panel">
     <h2>Подключение к репозиторию</h2>
     <form id="connect-form">
-      <div class="admin-grid2">
+      <p class="admin-repo-error" id="repo-error-line" hidden>
+        Не удалось определить репозиторий автоматически. Откройте эту страницу по адресу вида
+        <code>https://username.github.io/repo/admin.html</code> (там, где опубликован сайт через GitHub Pages).
+      </p>
+      <div class="admin-grid2" id="repo-fields-grid">
+        <div class="admin-field" id="owner-field-wrap" hidden>
+          <span>Владелец репозитория</span>
+          <input type="text" id="cfg-owner" readonly>
+        </div>
+        <div class="admin-field" id="repo-field-wrap" hidden>
+          <span>Название репозитория</span>
+          <input type="text" id="cfg-repo" readonly>
+        </div>
         <label class="admin-field">
           <span>Personal Access Token</span>
           <input type="password" id="cfg-token" placeholder="ghp_… или github_pat_…">
@@ -225,36 +236,23 @@ function detectRepoFromLocation(){
 
 function applyAutoDetect(){
   const detected = detectRepoFromLocation();
-  const cfg = getConfig();
-  const ownerWrap = document.getElementById("owner-field-wrap");
-  const repoWrap = document.getElementById("repo-field-wrap");
-  const detectedLine = document.getElementById("repo-detected-line");
-  const detectedText = document.getElementById("repo-detected-text");
+  const errorLine = document.getElementById("repo-error-line");
   const ownerInput = document.getElementById("cfg-owner");
   const repoInput = document.getElementById("cfg-repo");
+  const submitBtn = document.querySelector('#connect-form button[type="submit"]');
 
-  if(detected && !cfg.manualRepo){
-    ownerInput.value = cfg.owner || detected.owner;
-    repoInput.value = cfg.repo || detected.repo;
-    ownerWrap.hidden = true;
-    repoWrap.hidden = true;
-    detectedText.textContent = `${ownerInput.value}/${repoInput.value}`;
-    detectedLine.hidden = false;
+  if(detected){
+    ownerInput.value = detected.owner;
+    repoInput.value = detected.repo;
+    errorLine.hidden = true;
+    if(submitBtn) submitBtn.disabled = false;
   } else {
-    ownerWrap.hidden = false;
-    repoWrap.hidden = false;
-    detectedLine.hidden = true;
+    ownerInput.value = "";
+    repoInput.value = "";
+    errorLine.hidden = false;
+    if(submitBtn) submitBtn.disabled = true;
   }
 }
-
-document.getElementById("repo-manual-toggle").addEventListener("click", () => {
-  const cfg = getConfig();
-  cfg.manualRepo = true;
-  setConfig(cfg);
-  document.getElementById("owner-field-wrap").hidden = false;
-  document.getElementById("repo-field-wrap").hidden = false;
-  document.getElementById("repo-detected-line").hidden = true;
-});
 
 // ---------- конфиг / localStorage ----------
 function getConfig(){
@@ -830,9 +828,8 @@ document.getElementById("connect-form").addEventListener("submit", async e => {
   const repo = document.getElementById("cfg-repo").value.trim();
   const branch = DEFAULT_BRANCH;
   const token = document.getElementById("cfg-token").value.trim();
-  if(!owner || !repo || !token){ showStatus("Заполните владельца, репозиторий и токен.", "error"); return; }
-  const prevCfg = getConfig();
-  setConfig({ owner, repo, branch, token, manualRepo: !!prevCfg.manualRepo });
+  if(!owner || !repo || !token){ showStatus("Не удалось определить репозиторий или не указан токен.", "error"); return; }
+  setConfig({ owner, repo, branch, token });
   showStatus("Проверяем доступ…", "info");
   try{
     const res = await fetch(`${API_BASE}/repos/${owner}/${repo}`, { headers: authHeaders() });
@@ -866,14 +863,10 @@ document.getElementById("disconnect-btn").addEventListener("click", () => {
   showStatus("Токен забыт. Данные для входа удалены из этого браузера.", "info");
 });
 
-// ---------- автозаполнение при открытии, если конфиг уже сохранён ----------
+// ---------- автозаполнение при открытии, если токен уже сохранён ----------
 (function init(){
   const cfg = getConfig();
   applyAutoDetect();
-  if(cfg.manualRepo){
-    if(cfg.owner) document.getElementById("cfg-owner").value = cfg.owner;
-    if(cfg.repo) document.getElementById("cfg-repo").value = cfg.repo;
-  }
   if(cfg.token) document.getElementById("cfg-token").value = cfg.token;
   const owner = document.getElementById("cfg-owner").value;
   const repo = document.getElementById("cfg-repo").value;
