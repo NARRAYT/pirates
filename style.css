@@ -328,15 +328,7 @@ button{ font-family: var(--font-body); cursor:pointer; }
   padding: 14px;
   margin-top:18px;
 }
-.char-filters input[type="search"]{
-  flex: 1 1 220px;
-  font-family: var(--font-body);
-  font-size:.95rem;
-  padding:8px 10px;
-  border:1px solid var(--ink-soft);
-  background: var(--parchment-light);
-  color: var(--ink);
-}
+.char-filters input[type="search"]{ flex: 1 1 220px; }
 .char-filters select{
   font-family: var(--font-stamp);
   font-size:.75rem;
@@ -347,6 +339,32 @@ button{ font-family: var(--font-body); cursor:pointer; }
 }
 .char-filters .btn-ghost{ padding:7px 14px; font-size:.75rem; }
 .filter-count{ font-family:var(--font-stamp); font-size:.75rem; color:var(--ink-soft); margin: 14px 0 0; }
+
+/* ---------- поисковые поля: общий стиль (карта + персонажи) ---------- */
+.char-filters input[type="search"],
+.map-search input[type="search"]{
+  font-family: var(--font-body);
+  font-size:.95rem;
+  padding:9px 12px;
+  border:1px solid var(--ink-soft);
+  background: var(--parchment-light);
+  color: var(--ink);
+}
+.char-filters input[type="search"]::placeholder,
+.map-search input[type="search"]::placeholder{ color: var(--ink-soft); opacity:.65; }
+
+/* крестик очистки поля поиска — перекрашиваем в красный, единый для обоих полей */
+.char-filters input[type="search"]::-webkit-search-cancel-button,
+.map-search input[type="search"]::-webkit-search-cancel-button{
+  -webkit-appearance: none;
+  appearance: none;
+  height: 15px;
+  width: 15px;
+  cursor: pointer;
+  background: var(--wax-red);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'><path d='M5 5l14 14M19 5L5 19'/></svg>") no-repeat center / contain;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'><path d='M5 5l14 14M19 5L5 19'/></svg>") no-repeat center / contain;
+}
 
 .empty{
   font-family: var(--font-stamp);
@@ -480,25 +498,6 @@ footer.site-foot{
 .map-search input[type="search"]{
   flex: 1 1 320px;
   max-width: 420px;
-  font-family: var(--font-body);
-  font-size:.95rem;
-  padding:9px 12px;
-  border:1px solid var(--ink-soft);
-  background: var(--parchment-light);
-  color: var(--ink);
-}
-.map-search input[type="search"]::placeholder{ color: var(--ink-soft); opacity:.65; }
-
-/* крестик очистки поля поиска — перекрашиваем в красный */
-.map-search input[type="search"]::-webkit-search-cancel-button{
-  -webkit-appearance: none;
-  appearance: none;
-  height: 15px;
-  width: 15px;
-  cursor: pointer;
-  background: var(--wax-red);
-  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'><path d='M5 5l14 14M19 5L5 19'/></svg>") no-repeat center / contain;
-  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'><path d='M5 5l14 14M19 5L5 19'/></svg>") no-repeat center / contain;
 }
 /* Firefox: у крестика нет отдельного псевдоэлемента, но цвет текста/иконок в поле берём общий */
 
