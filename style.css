@@ -466,122 +466,112 @@ button{ font-family: var(--font-body); cursor:pointer; }
 .note-card h3{ margin-bottom:.25em; }
 .note-card .card-tags{ margin-top:10px; }
 
-/* ---------- книга (главы, разложенные по листам) ---------- */
-.book-head{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:16px;
-  flex-wrap:wrap;
-}
-.book-head h1{ margin-bottom:0; }
-.book-toc-btn{
-  font-family: var(--font-head);
-  font-size:.78rem;
-  letter-spacing:.05em;
-  text-transform:uppercase;
-  padding:8px 16px;
-  border:1px solid var(--gold);
-  background:transparent;
-  color: var(--ink-soft);
-  transition: background .15s ease, color .15s ease;
-}
-.book-toc-btn:hover{ background: var(--gold); color: var(--parchment-light); }
-.book-toc-btn[aria-expanded="true"]{ background: var(--leather-dark); color: var(--parchment-light); border-color: var(--leather-dark); }
-
-.book-toc{
-  margin: 14px 0 6px;
-  padding: 14px 16px;
-  background: var(--parchment-light);
-  border:1px solid var(--parchment-dark);
-  box-shadow: 0 6px 16px rgba(0,0,0,.2);
-}
-.book-toc-list{ list-style:none; margin:0; padding:0; columns: 2; column-gap:24px; }
-@media (max-width:640px){ .book-toc-list{ columns:1; } }
-.book-toc-item{
-  display:block;
-  width:100%;
-  text-align:left;
-  break-inside: avoid;
-  font-family: var(--font-body);
-  font-size:.96rem;
-  color: var(--ink);
-  background:transparent;
-  border:none;
-  border-bottom:1px dotted var(--parchment-dark);
-  padding:7px 2px;
-}
-.book-toc-item:hover{ color: var(--wax-red); }
-
+/* ---------- книга (главы; один плоский лист, без анимации перелистывания) ---------- */
 .book-stage{
   display:flex;
   align-items:center;
-  gap:18px;
+  gap:16px;
   margin-top:22px;
 }
-.book{
+
+/* стрелки — светлые, СНАРУЖИ блока с текстом */
+.book-arrow{
+  flex:0 0 auto;
+  width:44px; height:44px;
+  border:1px solid var(--parchment-dark);
+  border-radius:50%;
+  background: var(--parchment-light);
+  color: var(--ink);
+  font-size:1.1rem;
+  cursor:pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,.35);
+  transition: background .15s ease, transform .15s ease;
+}
+.book-arrow:hover:not(:disabled){ background:#fff; transform:translateY(-1px); }
+.book-arrow:disabled{ opacity:.3; cursor:default; box-shadow:none; }
+
+.book-wrap{
   position:relative;
   flex:1 1 auto;
   width: min(100%, 760px);
   margin:0 auto;
+}
+
+/* закладка-ярлычок, открывающая оглавление */
+.book-toc-tab{
+  position:absolute;
+  top:0;
+  right:22px;
+  transform: translateY(-100%);
+  font-family: var(--font-stamp);
+  font-size:.66rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:7px 14px;
+  border:1px solid var(--parchment-dark);
+  border-bottom:none;
+  border-radius:4px 4px 0 0;
+  background: var(--parchment-dark);
+  color: var(--parchment-light);
+  cursor:pointer;
+  z-index:3;
+  transition: background .15s ease;
+}
+.book-toc-tab:hover{ filter:brightness(1.15); }
+.book-toc-tab[aria-expanded="true"]{ background: var(--leather-dark); }
+
+/* оглавление — компактная панель, всплывающая ПОВЕРХ книги */
+.book-toc-panel{
+  position:absolute;
+  top:10px;
+  right:16px;
+  z-index:4;
+  min-width:220px;
+  max-width:80%;
+  max-height:80%;
+  overflow-y:auto;
+  background: var(--parchment-light);
+  border:1px solid var(--parchment-dark);
+  box-shadow: 0 14px 30px rgba(0,0,0,.45);
+  padding:10px 12px;
+}
+.book-toc-list{ list-style:none; margin:0; padding:0; }
+.book-toc-item{
+  display:block;
+  width:100%;
+  text-align:left;
+  font-family: var(--font-body);
+  font-size:.9rem;
+  color: var(--ink);
+  background:transparent;
+  border:none;
+  border-bottom:1px dotted var(--parchment-dark);
+  padding:6px 4px;
+}
+.book-toc-item:last-child{ border-bottom:none; }
+.book-toc-item:hover{ color: var(--wax-red); }
+
+/* сам лист — один плоский слой, без 3D и перелистывания */
+.book{
+  position:relative;
+  width:100%;
   aspect-ratio: 4 / 5;
   max-height:82vh;
-  perspective:2000px;
-  outline:none;
-}
-/* иллюзия стопки листов под верхним разворотом — книга выглядит объёмной */
-.book::before, .book::after{
-  content:"";
-  position:absolute;
-  top:6px; bottom:2px;
-  right:-4px;
-  width:100%;
-  background: var(--parchment-dark);
-  border:1px solid var(--parchment-dark);
-  z-index:0;
-}
-.book::before{ transform: translate(5px, 5px); opacity:.55; }
-.book::after{ transform: translate(9px, 9px); opacity:.32; }
-.book-pages{ position:relative; width:100%; height:100%; z-index:1; }
-.book-leaf{
-  position:absolute; inset:0;
-  transform-style:preserve-3d;
-  transition: transform .65s cubic-bezier(.45,.05,.2,1);
-  will-change: transform;
-}
-.book-leaf.flip-fwd{ transform: rotateY(-180deg); }
-.book-leaf.flip-back{ transform: rotateY(180deg); }
-.book-face{
-  position:absolute; inset:0;
   overflow-y:auto;
   padding:52px 54px;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0), rgba(0,0,0,.06) 96%),
-    var(--parchment-light);
+  background: var(--parchment-light);
   border:1px solid var(--parchment-dark);
-  border-radius: 3px 14px 14px 3px;
-  box-shadow:
-    3px 0 0 var(--parchment-dark),
-    6px 0 0 rgba(0,0,0,.08),
-    0 18px 40px var(--shadow);
-  backface-visibility:hidden;
-  -webkit-backface-visibility:hidden;
+  box-shadow: 0 16px 36px var(--shadow);
   color: var(--ink);
   font-size:1.04rem;
   line-height:1.75;
+  outline:none;
 }
-.book-face::before{
-  content:"";
-  position:absolute; left:0; top:0; bottom:0; width:28px;
-  background: linear-gradient(to right, rgba(0,0,0,.16), rgba(0,0,0,0));
-  pointer-events:none;
-}
-.book-face-back{ transform: rotateY(180deg); }
-.book-face .prose{ max-width:none; }
-.book-face .prose p{ margin:0; text-indent:1.5em; }
-.book-face .prose p.first,
-.book-face .prose p.cont{ text-indent:0; }
-.book-face .empty{ margin-top:10px; text-indent:0; }
+.book .prose{ max-width:none; }
+.book .prose p{ margin:0; text-indent:1.5em; }
+.book .prose p.first,
+.book .prose p.cont{ text-indent:0; }
+.book .empty{ margin-top:10px; text-indent:0; }
 .book-chapter-title{
   text-align:center;
   font-size:1.4rem;
@@ -599,27 +589,13 @@ button{ font-family: var(--font-body); cursor:pointer; }
   opacity:.65;
   margin: 0 0 1.6em;
 }
-.book-face .prose-img{
+.book .prose-img{
   display:block;
   margin: .6em auto;
   max-width:100%;
   max-height:44vh;
   height:auto;
 }
-
-.book-arrow{
-  flex:0 0 auto;
-  width:42px; height:42px;
-  border:1px solid var(--parchment-dark);
-  background: var(--leather-dark);
-  color: var(--parchment-light);
-  font-size:1.05rem;
-  cursor:pointer;
-  transition: filter .15s ease;
-  z-index:2;
-}
-.book-arrow:hover:not(:disabled){ filter:brightness(1.3); }
-.book-arrow:disabled{ opacity:.3; cursor:default; }
 
 .book-pageno{
   text-align:center;
@@ -631,11 +607,10 @@ button{ font-family: var(--font-body); cursor:pointer; }
 }
 
 @media (max-width:780px){
-  .book{ width:100%; aspect-ratio: 3 / 4; max-height:66vh; }
-  .book-face{ padding:26px 22px; font-size:1rem; }
+  .book{ aspect-ratio: 3 / 4; max-height:66vh; padding:26px 22px; font-size:1rem; }
   .book-chapter-title{ font-size:1.2rem; }
-  .book-arrow{ width:34px; height:34px; }
-  .book::before, .book::after{ display:none; }
+  .book-arrow{ width:36px; height:36px; }
+  .book-toc-panel{ min-width:180px; }
 }
 
 footer.site-foot{

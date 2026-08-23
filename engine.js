@@ -777,9 +777,7 @@ function attachNotesHandlers(){
 
 let bookComputed = [];     // посчитанные страницы: [{ chapterIdx, isFirst, html }, ...]
 let bookIndex = 0;
-let bookFlipping = false;
 let bookTocOpen = false;
-
 function bookChapters(){ return DATA.bookChapters || []; }
 
 // Разбивает текст главы на "блоки" — абзацы и картинки, с текстом абзаца
@@ -825,7 +823,7 @@ function getBookMeasurer(boxW, boxH){
     el.id = "book-measurer";
     document.body.appendChild(el);
   }
-  el.className = "book-face";
+  el.className = "book";
   el.style.position = "fixed";
   el.style.visibility = "hidden";
   el.style.pointerEvents = "none";
@@ -833,8 +831,11 @@ function getBookMeasurer(boxW, boxH){
   el.style.top = "0";
   el.style.right = "auto";
   el.style.bottom = "auto";
+  el.style.margin = "0";
   el.style.width = boxW + "px";
   el.style.height = boxH + "px";
+  el.style.maxHeight = "none";
+  el.style.aspectRatio = "auto";
   return el;
 }
 
@@ -950,22 +951,23 @@ function paginateAndRender(){
     }
     bookIndex = idx === -1 ? 0 : idx;
   }
-  renderBookPagesDOM();
+  renderBookPageDOM();
 }
 
+// ---- разметка раздела: один плоский лист, без анимации перелистывания.
+// Стрелки — снаружи блока с текстом. Оглавление — компактная всплывающая
+// панель поверх книги, открывается закладкой-ярлычком.
 function renderBook(){
   return `
   <section class="view book-view">
-    <div class="book-head">
-      <h1>Книга</h1>
-      <button type="button" class="book-toc-btn" id="book-toc-btn" aria-expanded="false">Оглавление</button>
-    </div>
-    <p class="section-intro">Листайте стрелками, свайпом на телефоне или клавишами ← →.</p>
-    <div class="book-toc" id="book-toc" hidden></div>
+    <h1>Книга</h1>
+    <p class="section-intro">Листайте стрелками или клавишами ← →.</p>
     <div class="book-stage">
       <button type="button" class="book-arrow book-arrow-prev" id="book-prev" aria-label="Предыдущая страница">&#10094;</button>
-      <div class="book" id="book" tabindex="0">
-        <div class="book-pages" id="book-pages"></div>
+      <div class="book-wrap">
+        <button type="button" class="book-toc-tab" id="book-toc-btn" aria-expanded="false">Оглавление</button>
+        <div class="book-toc-panel" id="book-toc" hidden></div>
+        <div class="book" id="book" tabindex="0"></div>
       </div>
       <button type="button" class="book-arrow book-arrow-next" id="book-next" aria-label="Следующая страница">&#10095;</button>
     </div>
@@ -973,23 +975,16 @@ function renderBook(){
   </section>`;
 }
 
-function renderBookPagesDOM(){
-  const pagesEl = document.getElementById("book-pages");
-  if(!pagesEl) return;
+function renderBookPageDOM(){
+  const pageEl = document.getElementById("book");
+  if(!pageEl) return;
   if(!bookComputed.length){
-    pagesEl.innerHTML = `<div class="book-leaf" style="z-index:2;"><div class="book-face book-face-front"><p class="empty">Глав пока нет — добавьте их в админке, в разделе «Книга».</p></div></div>`;
+    pageEl.innerHTML = `<p class="empty">Глав пока нет — добавьте их в админке, в разделе «Книга».</p>`;
     updateBookControls();
     return;
   }
   bookIndex = Math.max(0, Math.min(bookIndex, bookComputed.length - 1));
-  pagesEl.innerHTML = `
-    <div class="book-leaf" id="book-leaf-top" style="z-index:2;">
-      <div class="book-face book-face-front">${bookComputed[bookIndex].html}</div>
-      <div class="book-face book-face-back"></div>
-    </div>
-    <div class="book-leaf" id="book-leaf-bottom" style="z-index:1; visibility:hidden;">
-      <div class="book-face book-face-front"></div>
-    </div>`;
+  pageEl.innerHTML = bookComputed[bookIndex].html;
   updateBookControls();
 }
 
@@ -1009,40 +1004,16 @@ function updateBookControls(){
   }
   const prev = document.getElementById("book-prev");
   const next = document.getElementById("book-next");
-  if(prev) prev.disabled = bookFlipping || bookIndex <= 0;
-  if(next) next.disabled = bookFlipping || !bookComputed.length || bookIndex >= bookComputed.length - 1;
+  if(prev) prev.disabled = bookIndex <= 0;
+  if(next) next.disabled = !bookComputed.length || bookIndex >= bookComputed.length - 1;
 }
 
 function turnBookPage(dir){
-  if(bookFlipping || !bookComputed.length) return;
+  if(!bookComputed.length) return;
   const target = bookIndex + dir;
   if(target < 0 || target >= bookComputed.length) return;
-
-  bookFlipping = true;
-  updateBookControls();
-
-  const top = document.getElementById("book-leaf-top");
-  const bottom = document.getElementById("book-leaf-bottom");
-  if(!top || !bottom){ bookFlipping = false; return; }
-
-  bottom.querySelector(".book-face-front").innerHTML = bookComputed[target].html;
-  bottom.style.visibility = "visible";
-
-  top.style.transformOrigin = dir > 0 ? "left center" : "right center";
-  void top.offsetWidth; // форсируем пересчёт стилей перед стартом анимации
-  top.classList.add(dir > 0 ? "flip-fwd" : "flip-back");
-
-  let done = false;
-  const finish = () => {
-    if(done) return;
-    done = true;
-    top.removeEventListener("transitionend", finish);
-    bookIndex = target;
-    bookFlipping = false;
-    renderBookPagesDOM();
-  };
-  top.addEventListener("transitionend", finish);
-  setTimeout(finish, 800); // подстраховка, если transitionend не сработает
+  bookIndex = target;
+  renderBookPageDOM();
 }
 
 function renderBookTOC(){
@@ -1055,10 +1026,9 @@ function renderBookTOC(){
   `).join("")}</ol>`;
   el.querySelectorAll(".book-toc-item").forEach(btn => {
     btn.addEventListener("click", () => {
-      if(bookFlipping) return;
       const idx = Number(btn.dataset.chapter);
       const target = bookComputed.findIndex(p => p.chapterIdx === idx);
-      if(target !== -1){ bookIndex = target; renderBookPagesDOM(); }
+      if(target !== -1){ bookIndex = target; renderBookPageDOM(); }
       closeBookTOC();
     });
   });
@@ -1080,7 +1050,6 @@ function closeBookTOC(){
 }
 
 function attachBookHandlers(){
-  bookFlipping = false;
   bookTocOpen = false;
   renderBookTOC();
   paginateAndRender();
@@ -1097,6 +1066,7 @@ function attachBookHandlers(){
   book.addEventListener("keydown", e => {
     if(e.key === "ArrowRight"){ e.preventDefault(); turnBookPage(1); }
     else if(e.key === "ArrowLeft"){ e.preventDefault(); turnBookPage(-1); }
+    else if(e.key === "Escape" && bookTocOpen){ closeBookTOC(); }
   });
 
   let touchStartX = null, touchStartY = null;
@@ -1114,6 +1084,16 @@ function attachBookHandlers(){
     turnBookPage(dx < 0 ? 1 : -1);
   }, { passive:true });
 }
+
+// Закрываем оглавление по клику вне его — оно всплывает поверх книги.
+document.addEventListener("click", e => {
+  if(!bookTocOpen) return;
+  const toc = document.getElementById("book-toc");
+  const tab = document.getElementById("book-toc-btn");
+  if(!toc) return;
+  if(toc.contains(e.target) || (tab && tab.contains(e.target))) return;
+  closeBookTOC();
+});
 
 // Пересчитываем разбиение по листам при изменении размера окна (например,
 // поворот телефона) и после подгрузки шрифтов — размеры листа могли
