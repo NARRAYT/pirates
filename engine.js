@@ -10,7 +10,18 @@
    в index.html раньше этого файла).
    ========================================================================= */
 
-const DATA = window.SITE_DATA;
+const DATA = window.SITE_DATA || {};
+
+/* Если какой-то из файлов data/*.js не загрузился или в нём опечатка,
+   ломающая синтаксис, — соответствующее поле останется undefined.
+   Подставляем пустые списки, чтобы из-за одного битого файла не падал
+   рендер остальных разделов сайта. */
+DATA.locations = DATA.locations || [];
+DATA.ships = DATA.ships || [];
+DATA.characters = DATA.characters || [];
+DATA.historyTimeline = DATA.historyTimeline || [];
+DATA.notes = DATA.notes || [];
+DATA.bookPages = DATA.bookPages || [];
 
 /* =========================================================================
    Вспомогательные функции
@@ -22,11 +33,31 @@ function escapeHTML(str){
   }[s]));
 }
 
+/* Вытаскиваем из текста теги <img src="..."> ДО экранирования, чтобы
+   картинки, вставленные через подсказку в админке, реально показывались,
+   а весь остальной текст (в т.ч. случайно введённые < и >) оставался
+   безопасным текстом, а не выполнялся как HTML. */
+function extractImages(raw){
+  const found = [];
+  const withPlaceholders = raw.replace(/<img\s+[^<>]*?src\s*=\s*["']([^"']+)["'][^<>]*?>/gi, (m, src) => {
+    const idx = found.length;
+    found.push(`<img class="prose-img" src="${escapeHTML(src.trim())}" alt="" loading="lazy">`);
+    return `\u0000IMG${idx}\u0000`;
+  });
+  return { withPlaceholders, found };
+}
+
+function restoreImages(escapedText, found){
+  return escapedText.replace(/\u0000IMG(\d+)\u0000/g, (m, i) => found[Number(i)] ?? "");
+}
+
 function paragraphize(text){
   if(!text) return "";
-  return text.split(/\n\s*\n/).map(p =>
-    `<p>${escapeHTML(p).replace(/\n/g,"<br>")}</p>`
-  ).join("");
+  return text.split(/\n\s*\n/).map(p => {
+    const { withPlaceholders, found } = extractImages(p);
+    const escaped = escapeHTML(withPlaceholders).replace(/\n/g,"<br>");
+    return `<p>${restoreImages(escaped, found)}</p>`;
+  }).join("");
 }
 
 function hashStringToHue(str){
@@ -89,7 +120,8 @@ const ICONS = {
   blades: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16M20 4L4 20"/><circle cx="4" cy="4" r="1.3" fill="currentColor" stroke="none"/><circle cx="20" cy="4" r="1.3" fill="currentColor" stroke="none"/></svg>',
   hourglass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12"/><path d="M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/></svg>',
   quill: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-7 1-12 6-13 13l-2 3 3-2C15 17 20 12 21 5"/><path d="M9 15l6-6"/></svg>',
-  map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L4 6.2v13.6L9 17.6l6 2.2 5-2.2V4L15 6.2 9 4z"/><path d="M9 4v13.6M15 6.2v13.6"/></svg>'
+  map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L4 6.2v13.6L9 17.6l6 2.2 5-2.2V4L15 6.2 9 4z"/><path d="M9 4v13.6M15 6.2v13.6"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5c-1.6-1.2-3.7-1.7-6-1.7v13c2.3 0 4.4.5 6 1.7"/><path d="M12 6.5c1.6-1.2 3.7-1.7 6-1.7v13c-2.3 0-4.4.5-6 1.7"/><path d="M12 6.5v13"/></svg>'
 };
 
 const NAV_TABS = [
@@ -99,7 +131,8 @@ const NAV_TABS = [
   { route: "ships", label: "Корабли", icon: "wheel" },
   { route: "characters", label: "Персонажи", icon: "blades" },
   { route: "history", label: "История", icon: "hourglass" },
-  { route: "notes", label: "Заметки", icon: "quill" }
+  { route: "notes", label: "Заметки", icon: "quill" },
+  { route: "book", label: "Книга", icon: "book" }
 ];
 
 function buildSpineTabs(){
@@ -167,35 +200,189 @@ function renderMap(){
     </div>
 
     <div class="map-wrap" id="map-wrap">
-      ${hasImage
-        ? `<img class="map-image" src="${escapeHTML(DATA.mapImage)}" alt="Карта" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='flex');">
-           <div class="map-placeholder" style="display:none;">Не удалось загрузить картинку карты.</div>`
-        : `<div class="map-placeholder">Картинки вообще нет.</div>`
-      }
-      <div class="map-pins">
-        ${pinned.map(loc => `
-          <div class="map-pin" data-id="${loc.id}" data-name="${escapeHTML(loc.name.toLowerCase())}" style="left:${loc.mapX}%; top:${loc.mapY}%;">
-            <button class="map-pin-dot" type="button" aria-label="${escapeHTML(loc.name)} — открыть карточку"></button>
-            <span class="map-pin-label">${escapeHTML(loc.name)}</span>
-            <div class="map-pin-card">
-              ${imgTag(loc.image, loc.id, loc.name, "thumb")}
-              <div class="map-pin-card-body">
-                <span class="card-type">${escapeHTML(loc.type)}</span>
-                <h3>${escapeHTML(loc.name)}</h3>
-                <p class="card-desc">${escapeHTML(loc.short)}</p>
-                <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
+      ${hasImage ? `
+      <div class="map-zoom-viewport" id="map-viewport">
+        <div class="map-zoom-inner" id="map-zoom-inner">
+          <img class="map-image" id="map-image" src="${escapeHTML(DATA.mapImage)}" alt="Карта" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='flex');">
+          <div class="map-placeholder" style="display:none;">Не удалось загрузить картинку карты.</div>
+          <div class="map-pins">
+            ${pinned.map(loc => `
+              <div class="map-pin" data-id="${loc.id}" data-name="${escapeHTML(loc.name.toLowerCase())}" style="left:${loc.mapX}%; top:${loc.mapY}%;">
+                <button class="map-pin-dot" type="button" aria-label="${escapeHTML(loc.name)} — открыть карточку"></button>
+                <span class="map-pin-label">${escapeHTML(loc.name)}</span>
+                <div class="map-pin-card">
+                  ${imgTag(loc.image, loc.id, loc.name, "thumb")}
+                  <div class="map-pin-card-body">
+                    <span class="card-type">${escapeHTML(loc.type)}</span>
+                    <h3>${escapeHTML(loc.name)}</h3>
+                    <p class="card-desc">${escapeHTML(loc.short)}</p>
+                    <a class="btn btn-ghost" href="#location/${loc.id}">Открыть досье &rarr;</a>
+                  </div>
+                </div>
               </div>
-            </div>
+            `).join("")}
           </div>
-        `).join("")}
+        </div>
       </div>
+      ` : `<div class="map-placeholder">Картинки вообще нет.</div>`}
     </div>
+
+    ${hasImage ? `
+    <div class="map-zoom-controls">
+      <button type="button" class="btn btn-ghost map-zoom-btn" id="map-zoom-out" aria-label="Уменьшить">&minus;</button>
+      <input type="range" id="map-zoom-slider" min="100" max="400" step="1" value="100" aria-label="Масштаб карты">
+      <button type="button" class="btn btn-ghost map-zoom-btn" id="map-zoom-in" aria-label="Увеличить">&plus;</button>
+      <button type="button" class="btn btn-ghost map-zoom-reset" id="map-zoom-reset">Сброс</button>
+    </div>` : ""}
 
     ${!pinned.length ? `<p class="empty">Ни у одной локации не заданы координаты на карте (поля mapX / mapY в data/locations.js).</p>` : ""}
   </section>`;
 }
 
 let mapDocClickAttached = false;
+
+// ---- зум и панорамирование карты ----
+let mapZoom = 1;
+let mapPanX = 0;
+let mapPanY = 0;
+const MAP_ZOOM_MIN = 1;
+const MAP_ZOOM_MAX = 4;
+
+function clampMapPan(vpRect){
+  const scaledW = vpRect.width * mapZoom;
+  const scaledH = vpRect.height * mapZoom;
+  const minX = Math.min(0, vpRect.width - scaledW);
+  const minY = Math.min(0, vpRect.height - scaledH);
+  mapPanX = Math.min(0, Math.max(minX, mapPanX));
+  mapPanY = Math.min(0, Math.max(minY, mapPanY));
+}
+
+function applyMapTransform(){
+  const viewport = document.getElementById("map-viewport");
+  const inner = document.getElementById("map-zoom-inner");
+  if(!viewport || !inner) return;
+  clampMapPan(viewport.getBoundingClientRect());
+  inner.style.transform = `translate(${mapPanX}px, ${mapPanY}px) scale(${mapZoom})`;
+  inner.style.setProperty("--map-zoom", mapZoom);
+}
+
+function syncMapZoomUI(){
+  const slider = document.getElementById("map-zoom-slider");
+  if(slider) slider.value = String(Math.round(mapZoom * 100));
+  const wrap = document.getElementById("map-wrap");
+  if(wrap) wrap.classList.toggle("zoomed", mapZoom > 1.001);
+}
+
+// focalX/focalY — координаты курсора/пальца в системе окна (clientX/clientY),
+// вокруг которых должно происходить приближение
+function setMapZoom(newZoom, focalX, focalY){
+  const viewport = document.getElementById("map-viewport");
+  if(!viewport) return;
+  newZoom = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, newZoom));
+  const rect = viewport.getBoundingClientRect();
+  const fx = focalX != null ? focalX - rect.left : rect.width / 2;
+  const fy = focalY != null ? focalY - rect.top : rect.height / 2;
+  // точка карты под фокусом в текущем масштабе — держим её на месте при смене зума
+  const mapPointX = (fx - mapPanX) / mapZoom;
+  const mapPointY = (fy - mapPanY) / mapZoom;
+  mapZoom = newZoom;
+  mapPanX = fx - mapPointX * mapZoom;
+  mapPanY = fy - mapPointY * mapZoom;
+  applyMapTransform();
+  syncMapZoomUI();
+}
+
+function touchDistance(touches){
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.hypot(dx, dy);
+}
+function touchMidpoint(touches){
+  return {
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2
+  };
+}
+
+function attachMapZoomHandlers(){
+  const viewport = document.getElementById("map-viewport");
+  if(!viewport) return; // нет картинки карты — зумить нечего
+
+  mapZoom = 1; mapPanX = 0; mapPanY = 0;
+  applyMapTransform();
+  syncMapZoomUI();
+
+  // если картинка ещё не загрузилась — подгоняем пропорции viewport под неё,
+  // чтобы карта не растягивалась и не сжималась
+  const img = document.getElementById("map-image");
+  if(img){
+    const applyRatio = () => {
+      if(img.naturalWidth && img.naturalHeight){
+        viewport.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+      }
+    };
+    if(img.complete && img.naturalWidth) applyRatio();
+    else img.addEventListener("load", applyRatio);
+  }
+
+  // колесо мыши — зум вокруг курсора
+  viewport.addEventListener("wheel", e => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    setMapZoom(mapZoom * factor, e.clientX, e.clientY);
+  }, { passive: false });
+
+  // ползунок и кнопки
+  const slider = document.getElementById("map-zoom-slider");
+  if(slider) slider.addEventListener("input", () => setMapZoom(Number(slider.value) / 100));
+  const zoomInBtn = document.getElementById("map-zoom-in");
+  const zoomOutBtn = document.getElementById("map-zoom-out");
+  const resetBtn = document.getElementById("map-zoom-reset");
+  if(zoomInBtn) zoomInBtn.addEventListener("click", () => setMapZoom(mapZoom * 1.3));
+  if(zoomOutBtn) zoomOutBtn.addEventListener("click", () => setMapZoom(mapZoom / 1.3));
+  if(resetBtn) resetBtn.addEventListener("click", () => setMapZoom(1));
+
+  // перетаскивание мышью/пальцем, когда карта приближена
+  let dragging = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
+  viewport.addEventListener("pointerdown", e => {
+    if(mapZoom <= 1.001) return;
+    if(e.target.closest(".map-pin-dot") || e.target.closest(".map-pin-card")) return;
+    dragging = true;
+    dragStartX = e.clientX; dragStartY = e.clientY;
+    panStartX = mapPanX; panStartY = mapPanY;
+    viewport.setPointerCapture(e.pointerId);
+    viewport.classList.add("dragging");
+  });
+  viewport.addEventListener("pointermove", e => {
+    if(!dragging) return;
+    mapPanX = panStartX + (e.clientX - dragStartX);
+    mapPanY = panStartY + (e.clientY - dragStartY);
+    applyMapTransform();
+  });
+  const endDrag = () => { dragging = false; viewport.classList.remove("dragging"); };
+  viewport.addEventListener("pointerup", endDrag);
+  viewport.addEventListener("pointercancel", endDrag);
+
+  // пинч-зум двумя пальцами на телефоне
+  let pinchStartDist = null, pinchStartZoom = 1;
+  viewport.addEventListener("touchstart", e => {
+    if(e.touches.length === 2){
+      pinchStartDist = touchDistance(e.touches);
+      pinchStartZoom = mapZoom;
+    }
+  }, { passive: true });
+  viewport.addEventListener("touchmove", e => {
+    if(e.touches.length === 2 && pinchStartDist){
+      e.preventDefault();
+      const dist = touchDistance(e.touches);
+      const mid = touchMidpoint(e.touches);
+      setMapZoom(pinchStartZoom * (dist / pinchStartDist), mid.x, mid.y);
+    }
+  }, { passive: false });
+  viewport.addEventListener("touchend", e => {
+    if(e.touches.length < 2) pinchStartDist = null;
+  });
+}
 
 function filterMapPins(query){
   const q = query.trim().toLowerCase();
@@ -210,6 +397,7 @@ function filterMapPins(query){
 function attachMapHandlers(){
   const wrap = document.getElementById("map-wrap");
   if(!wrap) return;
+  attachMapZoomHandlers();
   wrap.addEventListener("click", e => {
     const dot = e.target.closest(".map-pin-dot");
     if(!dot) return;
@@ -506,8 +694,7 @@ function updateNotesList(){
   document.getElementById("notes-list").innerHTML = list.length ? list.map(n => `
     <div class="note-card">
       <h3>${escapeHTML(n.title)}</h3>
-      <p>${n.text}</p>
-      
+      <div class="prose">${paragraphize(n.text)}</div>
       <div class="card-tags">${(n.tags||[]).map(t=>`<span class="chip">${escapeHTML(t)}</span>`).join("")}</div>
     </div>
   `).join("") : `<p class="empty">Заметок с такой меткой пока нет.</p>`;
@@ -522,6 +709,127 @@ function attachNotesHandlers(){
     updateNotesList();
   });
   updateNotesList();
+}
+
+// ---- книга: листалка ----
+let bookIndex = 0;
+let bookFlipping = false;
+
+function bookPages(){ return DATA.bookPages || []; }
+
+function bookPageInnerHTML(p){
+  return `${p.title ? `<h2>${escapeHTML(p.title)}</h2>` : ""}<div class="prose">${paragraphize(p.text)}</div>`;
+}
+
+function renderBook(){
+  return `
+  <section class="view book-view">
+    <h1>Книга</h1>
+    <p class="section-intro">Листайте стрелками, свайпом на телефоне или клавишами ← →.</p>
+    <div class="book-stage">
+      <button type="button" class="book-arrow book-arrow-prev" id="book-prev" aria-label="Предыдущая страница">&#10094;</button>
+      <div class="book" id="book" tabindex="0">
+        <div class="book-pages" id="book-pages"></div>
+      </div>
+      <button type="button" class="book-arrow book-arrow-next" id="book-next" aria-label="Следующая страница">&#10095;</button>
+    </div>
+    <div class="book-pageno" id="book-pageno"></div>
+  </section>`;
+}
+
+function renderBookPagesDOM(){
+  const pagesEl = document.getElementById("book-pages");
+  if(!pagesEl) return;
+  const pages = bookPages();
+  if(!pages.length){
+    pagesEl.innerHTML = `<div class="book-leaf" style="z-index:2;"><div class="book-face book-face-front"><p class="empty">Страниц пока нет — добавьте их в админке, в разделе «Книга».</p></div></div>`;
+    updateBookControls();
+    return;
+  }
+  bookIndex = Math.max(0, Math.min(bookIndex, pages.length - 1));
+  pagesEl.innerHTML = `
+    <div class="book-leaf" id="book-leaf-top" style="z-index:2;">
+      <div class="book-face book-face-front">${bookPageInnerHTML(pages[bookIndex])}</div>
+      <div class="book-face book-face-back"></div>
+    </div>
+    <div class="book-leaf" id="book-leaf-bottom" style="z-index:1; visibility:hidden;">
+      <div class="book-face book-face-front"></div>
+    </div>`;
+  updateBookControls();
+}
+
+function updateBookControls(){
+  const pages = bookPages();
+  const pageno = document.getElementById("book-pageno");
+  if(pageno) pageno.textContent = pages.length ? `Страница ${bookIndex+1} из ${pages.length}` : "";
+  const prev = document.getElementById("book-prev");
+  const next = document.getElementById("book-next");
+  if(prev) prev.disabled = bookFlipping || bookIndex <= 0;
+  if(next) next.disabled = bookFlipping || !pages.length || bookIndex >= pages.length - 1;
+}
+
+function turnBookPage(dir){
+  const pages = bookPages();
+  if(bookFlipping || !pages.length) return;
+  const target = bookIndex + dir;
+  if(target < 0 || target >= pages.length) return;
+
+  bookFlipping = true;
+  updateBookControls();
+
+  const top = document.getElementById("book-leaf-top");
+  const bottom = document.getElementById("book-leaf-bottom");
+  if(!top || !bottom){ bookFlipping = false; return; }
+
+  bottom.querySelector(".book-face-front").innerHTML = bookPageInnerHTML(pages[target]);
+  bottom.style.visibility = "visible";
+
+  top.style.transformOrigin = dir > 0 ? "left center" : "right center";
+  void top.offsetWidth; // форсируем пересчёт стилей перед стартом анимации
+  top.classList.add(dir > 0 ? "flip-fwd" : "flip-back");
+
+  let done = false;
+  const finish = () => {
+    if(done) return;
+    done = true;
+    top.removeEventListener("transitionend", finish);
+    bookIndex = target;
+    bookFlipping = false;
+    renderBookPagesDOM();
+  };
+  top.addEventListener("transitionend", finish);
+  setTimeout(finish, 800); // подстраховка, если transitionend не сработает
+}
+
+function attachBookHandlers(){
+  bookFlipping = false;
+  renderBookPagesDOM();
+  const book = document.getElementById("book");
+  const prevBtn = document.getElementById("book-prev");
+  const nextBtn = document.getElementById("book-next");
+  if(prevBtn) prevBtn.addEventListener("click", () => turnBookPage(-1));
+  if(nextBtn) nextBtn.addEventListener("click", () => turnBookPage(1));
+  if(!book) return;
+
+  book.addEventListener("keydown", e => {
+    if(e.key === "ArrowRight"){ e.preventDefault(); turnBookPage(1); }
+    else if(e.key === "ArrowLeft"){ e.preventDefault(); turnBookPage(-1); }
+  });
+
+  let touchStartX = null, touchStartY = null;
+  book.addEventListener("touchstart", e => {
+    if(e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive:true });
+  book.addEventListener("touchend", e => {
+    if(touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    touchStartX = null; touchStartY = null;
+    if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    turnBookPage(dx < 0 ? 1 : -1);
+  }, { passive:true });
 }
 
 function renderNotFound(){
@@ -541,35 +849,51 @@ function render(){
   setActiveTab(route);
   const app = document.getElementById("app");
 
-  switch(route){
-    case "home":
-      app.innerHTML = renderHome(); break;
-    case "map":
-      app.innerHTML = renderMap();
-      attachMapHandlers();
-      break;
-    case "locations":
-      app.innerHTML = renderLocationsList(); break;
-    case "location":
-      app.innerHTML = renderLocationDetail(id); break;
-    case "ships":
-      app.innerHTML = renderShipsList(); break;
-    case "ship":
-      app.innerHTML = renderShipDetail(id); break;
-    case "characters":
-      app.innerHTML = renderCharactersList();
-      attachCharacterFilterHandlers();
-      break;
-    case "character":
-      app.innerHTML = renderCharacterDetail(id); break;
-    case "history":
-      app.innerHTML = renderHistory(); break;
-    case "notes":
-      app.innerHTML = renderNotes();
-      attachNotesHandlers();
-      break;
-    default:
-      app.innerHTML = renderNotFound();
+  try{
+    switch(route){
+      case "home":
+        app.innerHTML = renderHome(); break;
+      case "map":
+        app.innerHTML = renderMap();
+        attachMapHandlers();
+        break;
+      case "locations":
+        app.innerHTML = renderLocationsList(); break;
+      case "location":
+        app.innerHTML = renderLocationDetail(id); break;
+      case "ships":
+        app.innerHTML = renderShipsList(); break;
+      case "ship":
+        app.innerHTML = renderShipDetail(id); break;
+      case "characters":
+        app.innerHTML = renderCharactersList();
+        attachCharacterFilterHandlers();
+        break;
+      case "character":
+        app.innerHTML = renderCharacterDetail(id); break;
+      case "history":
+        app.innerHTML = renderHistory(); break;
+      case "notes":
+        app.innerHTML = renderNotes();
+        attachNotesHandlers();
+        break;
+      case "book":
+        app.innerHTML = renderBook();
+        attachBookHandlers();
+        break;
+      default:
+        app.innerHTML = renderNotFound();
+    }
+  }catch(err){
+    // Если в разделе битые данные — показываем понятную заглушку вместо
+    // пустой белой страницы (именно так раньше ломались "Заметки").
+    console.error("Ошибка рендера раздела:", route, err);
+    app.innerHTML = `
+      <section class="view">
+        <h1>Не удалось показать этот раздел</h1>
+        <p>Что-то пошло не так при отрисовке страницы. Возможно, в данных этого раздела опечатка.</p>
+        <p><a href="#home">Вернуться на главную</a></p>
+      </section>`;
   }
   window.scrollTo({ top: 0, behavior: "instant" });
 }

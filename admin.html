@@ -307,6 +307,14 @@ async function ghPutFile(path, content, sha, message){
 // ---------- описание файлов данных ----------
 const HEADER_NOTE = "\n   Этот файл можно редактировать и через панель admin.html — она\n   перезаписывает файл целиком (кавычки у ключей могут поменяться,\n   на работу сайта это не влияет), и вручную, как обычно.";
 
+// Подсказка про вставку картинок — показывается над полями текста, которые
+// это поддерживают (заметки, биография, история и т.п.). Показывается как
+// обычный текст (через HTML-сущности), а не как настоящий тег, поэтому
+// пример виден, а не пытается загрузиться как картинка.
+const IMG_HINT = 'Чтобы вставить картинку в текст, добавьте отдельной строкой: '
+  + '<code>&lt;img src="ССЫЛКА_НА_КАРТИНКУ"&gt;</code>. '
+  + 'Абзацы разделяйте пустой строкой.';
+
 const SCHEMAS = {
   locations: {
     file: "data/locations.js", dataKey: "locations", title: "Локации", kind: "array", idPrefix: "loc",
@@ -330,7 +338,7 @@ const SCHEMAS = {
       { key:"type", label:"Тип места", type:"text" },
       { key:"image", label:"Картинка (ссылка)", type:"text", placeholder:"пусто — авто-заглушка" },
       { key:"short", label:"Короткое описание", type:"textarea" },
-      { key:"history", label:"Полная история", type:"paragraphs", hint:"пустая строка — новый абзац" },
+      { key:"history", label:"Полная история", type:"paragraphs", hint: IMG_HINT },
       { key:"characterIds", label:"Персонажи", type:"checklist-dynamic", source:"characters", hint:"отметьте персонажей, привязанных к этой локации" },
       { key:"mapX", pairKey:"mapY", label:"Метка на карте", type:"mappoint",
         hint:"Кликните по карте или перетащите метку, чтобы задать положение. Числа тоже можно вписать вручную (проценты 0–100)." }
@@ -368,8 +376,8 @@ const SCHEMAS = {
       { key:"references", label:"Референсы", type:"pairs" },
       { key:"arts", label:"Арты", type:"pairs" },
       { key:"shortBio", label:"Короткая биография", type:"textarea" },
-      { key:"biography", label:"Полная биография", type:"paragraphs", hint:"пустая строка — новый абзац" },
-      { key:"historyNotes", label:"Предыстория", type:"paragraphs", hint:"пустая строка — новый абзац" }
+      { key:"biography", label:"Полная биография", type:"paragraphs", hint: IMG_HINT },
+      { key:"historyNotes", label:"Предыстория", type:"paragraphs", hint: IMG_HINT }
     ]
   },
   ships: {
@@ -393,7 +401,7 @@ const SCHEMAS = {
       { key:"type", label:"Тип/класс", type:"text" },
       { key:"image", label:"Картинка (ссылка)", type:"text", placeholder:"пусто — авто-заглушка" },
       { key:"short", label:"Короткое описание", type:"textarea" },
-      { key:"history", label:"Полная история", type:"paragraphs", hint:"пустая строка — новый абзац" },
+      { key:"history", label:"Полная история", type:"paragraphs", hint: IMG_HINT },
       { key:"characterIds", label:"Экипаж", type:"checklist-dynamic", source:"characters", hint:"отметьте персонажей из экипажа" }
     ]
   },
@@ -428,7 +436,23 @@ const SCHEMAS = {
     fields: [
       { key:"title", label:"Заголовок", type:"text" },
       { key:"tags", label:"Метки", type:"tags", hint:"через запятую" },
-      { key:"text", label:"Текст заметки (для вставки картинки </code><img src=\"https://e.radikal.host/2026/08/13/frrr.png\"</code> >)", type:"textarea" }
+      { key:"text", label:"Текст заметки", type:"paragraphs", hint: IMG_HINT }
+    ]
+  },
+  book: {
+    file: "data/book.js", dataKey: "bookPages", title: "Книга", kind: "array",
+    header: `/* =========================================================================
+   КНИГА
+   =========================================================================
+   Каждая запись — одна страница книги. Показываются по порядку — двигайте
+   стрелками вверх/вниз в админке, чтобы поменять порядок листания.
+   title  — необязательный заголовок страницы (например, «Глава 1»)
+   text   — текст страницы. Абзацы разделяйте ПУСТОЙ СТРОКОЙ${HEADER_NOTE}
+   ========================================================================= */
+`,
+    fields: [
+      { key:"title", label:"Заголовок страницы", type:"text", placeholder:"необязательно" },
+      { key:"text", label:"Текст страницы", type:"paragraphs", hint: IMG_HINT }
     ]
   },
   siteInfo: {
@@ -441,11 +465,11 @@ const SCHEMAS = {
       { key:"siteTitle", label:"Название сайта", type:"text" },
       { key:"siteTagline", label:"Подпись/тэглайн", type:"text" },
       { key:"mapImage", label:"Картинка карты (путь или ссылка)", type:"text" },
-      { key:"aboutInfo", label:"Текст на главной («Общие сведения»)", type:"paragraphs", hint:"пустая строка — новый абзац" }
+      { key:"aboutInfo", label:"Текст на главной («Общие сведения»)", type:"paragraphs", hint: IMG_HINT }
     ]
   }
 };
-const TAB_ORDER = ["characters","ships","locations","historyTimeline","notes","siteInfo"];
+const TAB_ORDER = ["characters","ships","locations","historyTimeline","notes","book","siteInfo"];
 
 let cache = {};       // { [schemaKey]: { data, sha } }
 let currentTab = null;
@@ -522,7 +546,7 @@ function renderField(field, value, item){
     case "number":
       return `<label class="admin-field"><span>${field.label}</span><input type="number" step="any" id="${id}" name="${field.key}" value="${value ?? ""}"></label>`;
     case "textarea":
-      return `<label class="admin-field"><span>${field.label}</span><textarea id="${id}" name="${field.key}" rows="3">${escapeHtml(value ?? "")}</textarea></label>`;
+      return `<label class="admin-field"><span>${field.label}</span>${field.hint ? `<small>${field.hint}</small>` : ""}<textarea id="${id}" name="${field.key}" rows="3">${escapeHtml(value ?? "")}</textarea></label>`;
     case "paragraphs":
       return `<label class="admin-field"><span>${field.label}</span>${field.hint ? `<small>${field.hint}</small>` : ""}<textarea id="${id}" name="${field.key}" rows="7" class="mono">${escapeHtml(value ?? "")}</textarea></label>`;
     case "tags":

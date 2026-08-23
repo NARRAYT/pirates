@@ -399,6 +399,16 @@ button{ font-family: var(--font-body); cursor:pointer; }
 
 .prose{ max-width: 72ch; }
 .prose p{ margin:0 0 1em; }
+.prose-img{
+  display:block;
+  max-width:100%;
+  height:auto;
+  margin:.6em 0;
+  border:1px solid var(--parchment-dark);
+  box-shadow: 0 6px 14px rgba(0,0,0,.3);
+  filter: sepia(.15) contrast(1.03) brightness(.97);
+}
+.note-card .prose{ max-width:none; }
 
 .gallery{
   display:grid;
@@ -460,6 +470,86 @@ button{ font-family: var(--font-body); cursor:pointer; }
 .note-card h3{ margin-bottom:.25em; }
 .note-card .card-tags{ margin-top:10px; }
 
+/* ---------- книга (страницы, которые листаются) ---------- */
+.book-stage{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:20px;
+}
+.book{
+  position:relative;
+  flex:1 1 auto;
+  max-width:640px;
+  margin:0 auto;
+  aspect-ratio: 3 / 4;
+  max-height:72vh;
+  perspective:1800px;
+  outline:none;
+}
+.book-pages{ position:relative; width:100%; height:100%; }
+.book-leaf{
+  position:absolute; inset:0;
+  transform-style:preserve-3d;
+  transition: transform .65s cubic-bezier(.45,.05,.2,1);
+  will-change: transform;
+}
+.book-leaf.flip-fwd{ transform: rotateY(-180deg); }
+.book-leaf.flip-back{ transform: rotateY(180deg); }
+.book-face{
+  position:absolute; inset:0;
+  overflow-y:auto;
+  padding:32px 30px;
+  background: var(--parchment-light);
+  border:1px solid var(--parchment-dark);
+  border-radius: 3px 14px 14px 3px;
+  box-shadow:
+    3px 0 0 var(--parchment-dark),
+    6px 0 0 rgba(0,0,0,.08),
+    0 14px 30px var(--shadow);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  color: var(--ink);
+}
+.book-face::before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0; width:24px;
+  background: linear-gradient(to right, rgba(0,0,0,.16), rgba(0,0,0,0));
+  pointer-events:none;
+}
+.book-face-back{ transform: rotateY(180deg); }
+.book-face h2{ margin-top:0; }
+.book-face .prose{ max-width:none; }
+.book-face .empty{ margin-top:10px; }
+
+.book-arrow{
+  flex:0 0 auto;
+  width:38px; height:38px;
+  border:1px solid var(--parchment-dark);
+  background: var(--leather-dark);
+  color: var(--parchment-light);
+  font-size:1rem;
+  cursor:pointer;
+  transition: filter .15s ease;
+}
+.book-arrow:hover:not(:disabled){ filter:brightness(1.3); }
+.book-arrow:disabled{ opacity:.3; cursor:default; }
+
+.book-pageno{
+  text-align:center;
+  font-family: var(--font-stamp);
+  font-size:.72rem;
+  letter-spacing:.06em;
+  color: var(--parchment-dark);
+  margin-top:12px;
+}
+
+@media (max-width:640px){
+  .book{ max-height:60vh; }
+  .book-face{ padding:24px 20px; }
+  .book-arrow{ width:32px; height:32px; }
+}
+
 footer.site-foot{
   text-align:center;
   font-family: var(--font-stamp);
@@ -514,10 +604,27 @@ footer.site-foot{
     var(--parchment-light);
   overflow: visible;
 }
+/* ---------- зум / панорамирование карты ---------- */
+.map-zoom-viewport{
+  position:relative;
+  width:100%;
+  aspect-ratio: 16/10; /* подстраивается под реальные пропорции картинки после её загрузки */
+  overflow:hidden;
+  touch-action:none;
+  cursor:default;
+}
+.map-wrap.zoomed .map-zoom-viewport{ cursor:grab; }
+.map-zoom-viewport.dragging{ cursor:grabbing !important; }
+.map-zoom-inner{
+  position:absolute; inset:0;
+  transform-origin: 0 0;
+  --map-zoom: 1;
+}
 .map-image{
   display:block;
   width:100%;
-  height:auto;
+  height:100%;
+  object-fit:fill;
   filter: sepia(.12) contrast(1.03) brightness(.97);
   pointer-events:none;
   user-select:none;
@@ -529,7 +636,32 @@ footer.site-foot{
   text-align:center; padding:24px;
 }
 .map-pins{ position:absolute; inset:0; }
-.map-pin{ position:absolute; transform: translate(-50%,-100%); }
+/* пины и их подписи не растут вместе с картой — держим их читаемый размер
+   независимо от масштаба, компенсируя зум обратным scale() */
+.map-pin{
+  position:absolute;
+  transform: translate(-50%,-100%) scale(calc(1 / var(--map-zoom, 1)));
+  transform-origin: 50% 100%;
+}
+
+.map-zoom-controls{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:12px;
+  max-width:420px;
+}
+.map-zoom-controls .map-zoom-btn{
+  width:34px; height:34px; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.1rem; line-height:1; flex:0 0 auto;
+}
+.map-zoom-controls .map-zoom-reset{ font-size:.68rem; padding:8px 12px; flex:0 0 auto; }
+.map-zoom-controls input[type="range"]{
+  flex:1 1 auto;
+  accent-color: var(--gold-bright);
+  cursor:pointer;
+}
 .map-pin-dot{
   width:18px; height:18px;
   border-radius: 50% 50% 50% 0;
