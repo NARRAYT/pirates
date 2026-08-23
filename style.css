@@ -608,6 +608,9 @@ footer.site-foot{
   overflow:hidden;
   touch-action:none;
   cursor:default;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-user-drag:none;
 }
 .map-wrap.zoomed .map-zoom-viewport{ cursor:grab; }
 .map-zoom-viewport.dragging{ cursor:grabbing !important; }
@@ -624,6 +627,7 @@ footer.site-foot{
   filter: sepia(.12) contrast(1.03) brightness(.97);
   pointer-events:none;
   user-select:none;
+  -webkit-user-drag:none;
 }
 .map-placeholder{
   aspect-ratio: 16/10;

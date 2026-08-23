@@ -203,7 +203,7 @@ function renderMap(){
       ${hasImage ? `
       <div class="map-zoom-viewport" id="map-viewport">
         <div class="map-zoom-inner" id="map-zoom-inner">
-          <img class="map-image" id="map-image" src="${escapeHTML(DATA.mapImage)}" alt="Карта" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='flex');">
+          <img class="map-image" id="map-image" src="${escapeHTML(DATA.mapImage)}" alt="Карта" draggable="false" onerror="this.style.display='none'; this.nextElementSibling && (this.nextElementSibling.style.display='flex');">
           <div class="map-placeholder" style="display:none;">Не удалось загрузить картинку карты.</div>
           <div class="map-pins">
             ${pinned.map(loc => `
@@ -384,11 +384,21 @@ function attachMapZoomHandlers(){
   if(zoomOutBtn) zoomOutBtn.addEventListener("click", () => setMapZoom(mapZoom / 1.3));
   if(resetBtn) resetBtn.addEventListener("click", () => setMapZoom(1));
 
+  // на некоторых браузерах (особенно Safari/Firefox) одного preventDefault
+  // на pointerdown недостаточно, чтобы картинка карты не пыталась начать
+  // нативный drag сама по себе — глушим это отдельно.
+  viewport.addEventListener("dragstart", e => e.preventDefault());
+
   // перетаскивание мышью/пальцем, когда карта приближена
   let dragging = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
   viewport.addEventListener("pointerdown", e => {
     if(mapZoom <= 1.001) return;
     if(e.target.closest(".map-pin-dot") || e.target.closest(".map-pin-card")) return;
+    // без этого браузер параллельно с нашим перетаскиванием пытается запустить
+    // свои реакции на mousedown — нативный drag картинки и/или выделение текста.
+    // Именно из-за этого после первого нормального перетаскивания курсор
+    // на следующий раз "цепляется" за контент вместо панорамирования карты.
+    e.preventDefault();
     dragging = true;
     dragStartX = e.clientX; dragStartY = e.clientY;
     panStartX = mapPanX; panStartY = mapPanY;
