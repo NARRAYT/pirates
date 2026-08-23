@@ -31,7 +31,7 @@ window.SITE_DATA.characters = [
     "statusLabel": "Жив",
     "faction": "Испания",
     "locationId": "loc-siren-cove",
-    "shipId": "ship-crimson-maw",
+    "shipId": "ship-subbota",
     "tags": [
       "канонир"
     ],
@@ -64,7 +64,7 @@ window.SITE_DATA.characters = [
     "statusLabel": "Жив",
     "faction": "Британия",
     "locationId": "loc-port-noire",
-    "shipId": "ship-crimson-maw",
+    "shipId": "ship-subbota",
     "tags": [
       "Капитан"
     ],
@@ -83,7 +83,7 @@ window.SITE_DATA.characters = [
     "statusLabel": "Жив",
     "faction": "Британия",
     "locationId": "loc-port-noire",
-    "shipId": "ship-storm-wren",
+    "shipId": "ship-meri",
     "tags": [
       "Говноед",
       "капитан"
