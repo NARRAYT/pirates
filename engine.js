@@ -21,7 +21,7 @@ DATA.ships = DATA.ships || [];
 DATA.characters = DATA.characters || [];
 DATA.historyTimeline = DATA.historyTimeline || [];
 DATA.notes = DATA.notes || [];
-DATA.bookPages = DATA.bookPages || [];
+DATA.bookChapters = DATA.bookChapters || [];
 
 /* =========================================================================
    Вспомогательные функции
@@ -768,21 +768,200 @@ function attachNotesHandlers(){
   updateNotesList();
 }
 
-// ---- книга: листалка ----
+// ---- книга: главы автоматически разбиваются на страницы-листы ----
+//
+// В данных (data/book.js) хранятся ГЛАВЫ целиком, текст любой длины.
+// Здесь этот текст на лету раскладывается по страницам так, чтобы он
+// всегда помещался в лист книги, а если не помещается — переносится
+// на следующий лист, как в обычной бумажной книге.
+
+let bookComputed = [];     // посчитанные страницы: [{ chapterIdx, isFirst, html }, ...]
 let bookIndex = 0;
 let bookFlipping = false;
+let bookTocOpen = false;
 
-function bookPages(){ return DATA.bookPages || []; }
+function bookChapters(){ return DATA.bookChapters || []; }
 
-function bookPageInnerHTML(p){
-  return `${p.title ? `<h2>${escapeHTML(p.title)}</h2>` : ""}<div class="prose">${paragraphize(p.text)}</div>`;
+// Разбивает текст главы на "блоки" — абзацы и картинки, с текстом абзаца
+// ещё и разбитым на токены (слова/теги/пробелы), чтобы длинный абзац можно
+// было при необходимости разрезать между листами.
+function tokenizeHTML(html){
+  const re = /(<[^>]+>)|(\s+)|([^\s<]+)/g;
+  const tokens = [];
+  let m;
+  while((m = re.exec(html))) tokens.push(m[0]);
+  return tokens;
+}
+
+function textToBlocks(text){
+  if(!text) return [];
+  return text.split(/\n\s*\n/).map(raw => {
+    const trimmedRaw = raw.trim();
+    if(!trimmedRaw) return null;
+    const { withPlaceholders, found } = extractImages(trimmedRaw);
+    const soleImage = found.length === 1 && withPlaceholders.trim() === "\u0000IMG0\u0000";
+    if(soleImage) return { type:"image", html: found[0] };
+    const escaped = escapeHTML(withPlaceholders).replace(/\n/g, "<br>");
+    const html = restoreImages(escaped, found);
+    return { type:"text", html, words: tokenizeHTML(html) };
+  }).filter(Boolean);
+}
+
+// Заголовок главы — крупный, на первом листе главы; на остальных листах
+// той же главы — небольшая "колонтитул"-подпись с названием, как в книгах.
+function buildPageHTML(ch, isFirst, innerHTML){
+  const head = isFirst
+    ? (ch.title ? `<h2 class="book-chapter-title">${escapeHTML(ch.title)}</h2>` : "")
+    : (ch.title ? `<div class="book-running-head">${escapeHTML(ch.title)}</div>` : "");
+  return `${head}<div class="prose">${innerHTML}</div>`;
+}
+
+// Готовит скрытый элемент для измерения — те же стили/размеры, что и лист
+// книги, но невидимый и вне потока страницы.
+function getBookMeasurer(boxW, boxH){
+  let el = document.getElementById("book-measurer");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "book-measurer";
+    document.body.appendChild(el);
+  }
+  el.className = "book-face";
+  el.style.position = "fixed";
+  el.style.visibility = "hidden";
+  el.style.pointerEvents = "none";
+  el.style.left = "-9999px";
+  el.style.top = "0";
+  el.style.right = "auto";
+  el.style.bottom = "auto";
+  el.style.width = boxW + "px";
+  el.style.height = boxH + "px";
+  return el;
+}
+
+// Раскладывает все главы по страницам, которые реально помещаются в лист
+// книги при текущем размере экрана.
+function computeBookPages(){
+  const chapters = bookChapters();
+  const book = document.getElementById("book");
+  if(!book) return null;
+  const boxW = book.clientWidth, boxH = book.clientHeight;
+  if(!boxW || !boxH) return null;
+  if(!chapters.length) return [];
+
+  const measurer = getBookMeasurer(boxW, boxH);
+  const fits = html => { measurer.innerHTML = html; return measurer.scrollHeight <= boxH + 1; };
+
+  const pages = [];
+
+  chapters.forEach((ch, chapterIdx) => {
+    const blocks = textToBlocks(ch.text);
+    let pageBlocks = [];
+    let isFirst = true;
+    let hasContent = false;
+    let firstParaOfChapter = true;
+
+    const flush = () => {
+      pages.push({ chapterIdx, isFirst, html: buildPageHTML(ch, isFirst, pageBlocks.join("")) });
+      pageBlocks = [];
+      isFirst = false;
+      hasContent = false;
+    };
+
+    if(!blocks.length){ flush(); return; }
+
+    blocks.forEach(block => {
+      if(block.type === "image"){
+        const candidate = pageBlocks.concat(block.html);
+        if(fits(buildPageHTML(ch, isFirst, candidate.join("")))){
+          pageBlocks = candidate; hasContent = true;
+        }else{
+          if(hasContent) flush();
+          pageBlocks = [block.html];
+          hasContent = true;
+          // если картинка сама по себе крупнее листа — оставляем как есть,
+          // её размер всё равно ограничен по ширине/высоте в CSS
+        }
+        return;
+      }
+
+      const isFirstPara = firstParaOfChapter;
+      firstParaOfChapter = false;
+      const openCls = isFirstPara ? ' class="first"' : "";
+
+      const whole = `<p${openCls}>${block.html}</p>`;
+      const candidateWhole = pageBlocks.concat(whole);
+      if(fits(buildPageHTML(ch, isFirst, candidateWhole.join("")))){
+        pageBlocks = candidateWhole; hasContent = true; return;
+      }
+
+      // Абзац целиком не помещается — переносим его между листами по словам,
+      // как переносится текст в обычной книге.
+      let tokens = block.words.slice();
+      let isParaStart = true;
+      while(tokens.length){
+        let lo = 1, hi = tokens.length, best = 0;
+        while(lo <= hi){
+          const mid = (lo + hi) >> 1;
+          const cls = isParaStart ? openCls : ' class="cont"';
+          const piece = `<p${cls}>${tokens.slice(0, mid).join("")}</p>`;
+          if(fits(buildPageHTML(ch, isFirst, pageBlocks.concat(piece).join("")))){ best = mid; lo = mid + 1; }
+          else hi = mid - 1;
+        }
+        if(best === 0){
+          if(hasContent){ flush(); continue; }
+          best = 1; // пустой лист не может остаться пустым — не даём зависнуть
+        }
+        const cls = isParaStart ? openCls : ' class="cont"';
+        pageBlocks.push(`<p${cls}>${tokens.slice(0, best).join("")}</p>`);
+        hasContent = true;
+        tokens = tokens.slice(best);
+        isParaStart = false;
+        if(tokens.length) flush();
+      }
+    });
+
+    if(hasContent || isFirst) flush();
+  });
+
+  return pages;
+}
+
+// Запоминаем примерное место чтения (глава + номер листа внутри главы),
+// чтобы после пересчёта (например, при изменении размера окна) остаться
+// примерно там же, а не отбрасывать читателя в начало.
+function currentPageMemo(){
+  const p = bookComputed[bookIndex];
+  if(!p) return null;
+  let local = 0;
+  for(let i = bookIndex - 1; i >= 0 && bookComputed[i].chapterIdx === p.chapterIdx; i--) local++;
+  return { chapterIdx: p.chapterIdx, local };
+}
+
+function paginateAndRender(){
+  const memo = currentPageMemo();
+  const computed = computeBookPages();
+  if(computed === null) return;
+  bookComputed = computed;
+  if(memo){
+    let idx = bookComputed.findIndex(p => p.chapterIdx === memo.chapterIdx);
+    if(idx !== -1){
+      let steps = memo.local;
+      while(steps > 0 && bookComputed[idx + 1] && bookComputed[idx + 1].chapterIdx === memo.chapterIdx){ idx++; steps--; }
+    }
+    bookIndex = idx === -1 ? 0 : idx;
+  }
+  renderBookPagesDOM();
 }
 
 function renderBook(){
   return `
   <section class="view book-view">
-    <h1>Книга</h1>
+    <div class="book-head">
+      <h1>Книга</h1>
+      <button type="button" class="book-toc-btn" id="book-toc-btn" aria-expanded="false">Оглавление</button>
+    </div>
     <p class="section-intro">Листайте стрелками, свайпом на телефоне или клавишами ← →.</p>
+    <div class="book-toc" id="book-toc" hidden></div>
     <div class="book-stage">
       <button type="button" class="book-arrow book-arrow-prev" id="book-prev" aria-label="Предыдущая страница">&#10094;</button>
       <div class="book" id="book" tabindex="0">
@@ -797,16 +976,15 @@ function renderBook(){
 function renderBookPagesDOM(){
   const pagesEl = document.getElementById("book-pages");
   if(!pagesEl) return;
-  const pages = bookPages();
-  if(!pages.length){
-    pagesEl.innerHTML = `<div class="book-leaf" style="z-index:2;"><div class="book-face book-face-front"><p class="empty">Страниц пока нет — добавьте их в админке, в разделе «Книга».</p></div></div>`;
+  if(!bookComputed.length){
+    pagesEl.innerHTML = `<div class="book-leaf" style="z-index:2;"><div class="book-face book-face-front"><p class="empty">Глав пока нет — добавьте их в админке, в разделе «Книга».</p></div></div>`;
     updateBookControls();
     return;
   }
-  bookIndex = Math.max(0, Math.min(bookIndex, pages.length - 1));
+  bookIndex = Math.max(0, Math.min(bookIndex, bookComputed.length - 1));
   pagesEl.innerHTML = `
     <div class="book-leaf" id="book-leaf-top" style="z-index:2;">
-      <div class="book-face book-face-front">${bookPageInnerHTML(pages[bookIndex])}</div>
+      <div class="book-face book-face-front">${bookComputed[bookIndex].html}</div>
       <div class="book-face book-face-back"></div>
     </div>
     <div class="book-leaf" id="book-leaf-bottom" style="z-index:1; visibility:hidden;">
@@ -816,20 +994,29 @@ function renderBookPagesDOM(){
 }
 
 function updateBookControls(){
-  const pages = bookPages();
+  const chapters = bookChapters();
   const pageno = document.getElementById("book-pageno");
-  if(pageno) pageno.textContent = pages.length ? `Страница ${bookIndex+1} из ${pages.length}` : "";
+  if(pageno){
+    if(!bookComputed.length){
+      pageno.textContent = "";
+    }else{
+      const page = bookComputed[bookIndex];
+      let local = 0;
+      for(let i = 0; i < bookIndex; i++){ if(bookComputed[i].chapterIdx === page.chapterIdx) local++; }
+      const inChapter = bookComputed.filter(p => p.chapterIdx === page.chapterIdx).length;
+      pageno.textContent = `Глава ${page.chapterIdx + 1} из ${chapters.length} · лист ${local + 1} из ${inChapter}`;
+    }
+  }
   const prev = document.getElementById("book-prev");
   const next = document.getElementById("book-next");
   if(prev) prev.disabled = bookFlipping || bookIndex <= 0;
-  if(next) next.disabled = bookFlipping || !pages.length || bookIndex >= pages.length - 1;
+  if(next) next.disabled = bookFlipping || !bookComputed.length || bookIndex >= bookComputed.length - 1;
 }
 
 function turnBookPage(dir){
-  const pages = bookPages();
-  if(bookFlipping || !pages.length) return;
+  if(bookFlipping || !bookComputed.length) return;
   const target = bookIndex + dir;
-  if(target < 0 || target >= pages.length) return;
+  if(target < 0 || target >= bookComputed.length) return;
 
   bookFlipping = true;
   updateBookControls();
@@ -838,7 +1025,7 @@ function turnBookPage(dir){
   const bottom = document.getElementById("book-leaf-bottom");
   if(!top || !bottom){ bookFlipping = false; return; }
 
-  bottom.querySelector(".book-face-front").innerHTML = bookPageInnerHTML(pages[target]);
+  bottom.querySelector(".book-face-front").innerHTML = bookComputed[target].html;
   bottom.style.visibility = "visible";
 
   top.style.transformOrigin = dir > 0 ? "left center" : "right center";
@@ -858,14 +1045,53 @@ function turnBookPage(dir){
   setTimeout(finish, 800); // подстраховка, если transitionend не сработает
 }
 
+function renderBookTOC(){
+  const el = document.getElementById("book-toc");
+  if(!el) return;
+  const chapters = bookChapters();
+  if(!chapters.length){ el.innerHTML = `<p class="empty">Глав пока нет.</p>`; return; }
+  el.innerHTML = `<ol class="book-toc-list">${chapters.map((ch, i) => `
+    <li><button type="button" class="book-toc-item" data-chapter="${i}">${escapeHTML(ch.title || `Глава ${i+1}`)}</button></li>
+  `).join("")}</ol>`;
+  el.querySelectorAll(".book-toc-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if(bookFlipping) return;
+      const idx = Number(btn.dataset.chapter);
+      const target = bookComputed.findIndex(p => p.chapterIdx === idx);
+      if(target !== -1){ bookIndex = target; renderBookPagesDOM(); }
+      closeBookTOC();
+    });
+  });
+}
+
+function toggleBookTOC(){
+  bookTocOpen = !bookTocOpen;
+  const el = document.getElementById("book-toc");
+  const btn = document.getElementById("book-toc-btn");
+  if(el) el.hidden = !bookTocOpen;
+  if(btn) btn.setAttribute("aria-expanded", String(bookTocOpen));
+}
+function closeBookTOC(){
+  bookTocOpen = false;
+  const el = document.getElementById("book-toc");
+  const btn = document.getElementById("book-toc-btn");
+  if(el) el.hidden = true;
+  if(btn) btn.setAttribute("aria-expanded", "false");
+}
+
 function attachBookHandlers(){
   bookFlipping = false;
-  renderBookPagesDOM();
+  bookTocOpen = false;
+  renderBookTOC();
+  paginateAndRender();
+
   const book = document.getElementById("book");
   const prevBtn = document.getElementById("book-prev");
   const nextBtn = document.getElementById("book-next");
+  const tocBtn = document.getElementById("book-toc-btn");
   if(prevBtn) prevBtn.addEventListener("click", () => turnBookPage(-1));
   if(nextBtn) nextBtn.addEventListener("click", () => turnBookPage(1));
+  if(tocBtn) tocBtn.addEventListener("click", toggleBookTOC);
   if(!book) return;
 
   book.addEventListener("keydown", e => {
@@ -887,6 +1113,20 @@ function attachBookHandlers(){
     if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
     turnBookPage(dx < 0 ? 1 : -1);
   }, { passive:true });
+}
+
+// Пересчитываем разбиение по листам при изменении размера окна (например,
+// поворот телефона) и после подгрузки шрифтов — размеры листа могли
+// измениться. Слушатели общие на весь сайт, но реально что-то делают,
+// только когда открыт раздел "Книга".
+let bookResizeTimer = null;
+window.addEventListener("resize", () => {
+  if(!document.getElementById("book")) return;
+  clearTimeout(bookResizeTimer);
+  bookResizeTimer = setTimeout(paginateAndRender, 150);
+});
+if(document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => { if(document.getElementById("book")) paginateAndRender(); });
 }
 
 function renderNotFound(){

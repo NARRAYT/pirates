@@ -440,19 +440,21 @@ const SCHEMAS = {
     ]
   },
   book: {
-    file: "data/book.js", dataKey: "bookPages", title: "Книга", kind: "array",
+    file: "data/book.js", dataKey: "bookChapters", title: "Книга", kind: "array",
     header: `/* =========================================================================
    КНИГА
    =========================================================================
-   Каждая запись — одна страница книги. Показываются по порядку — двигайте
-   стрелками вверх/вниз в админке, чтобы поменять порядок листания.
-   title  — необязательный заголовок страницы (например, «Глава 1»)
-   text   — текст страницы. Абзацы разделяйте ПУСТОЙ СТРОКОЙ${HEADER_NOTE}
+   Каждая запись — ЦЕЛАЯ ГЛАВА (текст любой длины). Показываются по порядку —
+   двигайте стрелками вверх/вниз в админке, чтобы поменять порядок глав.
+   Сайт сам разбивает текст главы на страницы-листы и переносит текст на
+   новый лист, если он не помещается — как в обычной книге.
+   title  — необязательное название главы (например, «Глава 1»)
+   text   — полный текст главы. Абзацы разделяйте ПУСТОЙ СТРОКОЙ${HEADER_NOTE}
    ========================================================================= */
 `,
     fields: [
-      { key:"title", label:"Заголовок страницы", type:"text", placeholder:"необязательно" },
-      { key:"text", label:"Текст страницы", type:"paragraphs", hint: IMG_HINT }
+      { key:"title", label:"Название главы", type:"text", placeholder:"например, «Глава 1»" },
+      { key:"text", label:"Текст главы", type:"paragraphs", hint: "Пишите сколько угодно — на странице текст сам разложится по листам. " + IMG_HINT }
     ]
   },
   siteInfo: {
@@ -755,7 +757,7 @@ function renderList(key){
   const rows = data.map((item, idx) => `
     <div class="admin-row" data-idx="${idx}">
       <div class="admin-row-main">
-        <strong>${escapeHtml(itemTitle(item))}</strong>
+        <strong>${escapeHtml(key === "book" ? (item.title || `Глава ${idx+1}`) : itemTitle(item))}</strong>
         ${item.type ? `<span class="admin-row-sub">${escapeHtml(item.type)}</span>` : ""}
       </div>
       <div class="admin-row-actions">
